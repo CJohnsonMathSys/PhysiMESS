@@ -18,7 +18,7 @@ void setup_microenvironment( void )
     {
         if (
             //dist(microenvironment.mesh.voxels[n].center,position) >= parameters.doubles["initial_tumor_rad"].value
-            microenvironment.mesh.voxels[n].center[0]-x_coordinate_fibre <=1.0
+            -10.0 <= microenvironment.mesh.voxels[n].center[0]-x_coordinate_fibre <=10.0
             )
         {
             //microenvironment.add_dirichlet_node(n,default_microenvironment_options.Dirichlet_condition_vector); 
