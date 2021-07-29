@@ -120,7 +120,7 @@ bool Write_SVG_rect( std::ostream& os , double UL_corner_x, double UL_corner_y, 
 bool Write_SVG_circle( std::ostream& os , double center_x, double center_y, double radius, 
                      double stroke_size, std::string stroke_color , std::string fill_color )
 {
- os << "  <rect x=\"" << center_x - radius*0.133 << "\" y=\"" << center_y + radius*5 << "\" width=\"" << radius*0.266 << "\" height=\"" 
+ os << "  <rect x=\"" << center_x - radius*0.133 << "\" y=\"" << center_y - radius*2.5 << "\" width=\"" << radius*0.266 << "\" height=\"" 
     << radius*5.0 << "\" stroke-width=\"" << stroke_size 
     << "\" stroke=\"" << stroke_color << "\" fill=\"" << fill_color << "\"/>" << std::endl; 
  return true; 
