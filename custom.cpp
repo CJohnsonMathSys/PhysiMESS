@@ -157,46 +157,6 @@ void middle_migration_direction( Cell* pCell, Phenotype& phenotype, double dt )
 	return; 
 }
 
-void custom_worm_function( Cell* pCell, Phenotype& phenotype , double dt )
-{
-	// look for cells to form attachments 
-	int number_of_attachments = pCell->state.number_of_attached_cells(); 
-	std::vector<Cell*> nearby = pCell->nearby_interacting_cells(); 
-	
-	int n = 0; 
-	while( number_of_attachments < (int) pCell->custom_data["max_attachments"] && 
-		n < nearby.size() )
-	{
-		if( nearby[n] != pCell && 
-				nearby[n]->state.number_of_attached_cells() < 
-				nearby[n]->custom_data["max_attachments"] )
-		{
-			attach_cells( nearby[n] , pCell ); 
-			number_of_attachments++;
-		}
-		n++; 
-	}
-
-	// if no attachments, use chemotaxis 
-	if( number_of_attachments == 0 )
-	{ pCell->functions.update_migration_bias = chemotaxis_function; } 
-	
-	// if 1 attachment, use stretch 
-	if( number_of_attachments == 1 )
-	{
-		pCell->functions.update_migration_bias = stretch_migration_direction;
-		phenotype.secretion.secretion_rates[0] = 100; 
-	} 
-	
-	// if 2 or more attachments, use middle
-	if( number_of_attachments > 1 )
-	{
-		pCell->functions.update_migration_bias = middle_migration_direction;
-		phenotype.secretion.secretion_rates[0] = 1; 
-	} 
-	
-	return; 
-} 
 
 // PhysiCell has a built-in contact function for elastic spring-like attachmetns 
 
