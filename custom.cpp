@@ -151,12 +151,6 @@ void stretch_migration_direction( Cell* pCell, Phenotype& phenotype, double dt )
 	return chemotaxis_function( pCell,phenotype,dt); 
 }
 
-void middle_migration_direction( Cell* pCell, Phenotype& phenotype, double dt )
-{
-	phenotype.motility.migration_speed = 0; // 0.1; 
-	return; 
-}
-
 
 // PhysiCell has a built-in contact function for elastic spring-like attachmetns 
 
