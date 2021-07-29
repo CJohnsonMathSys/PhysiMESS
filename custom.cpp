@@ -122,6 +122,28 @@ void setup_tissue( void )
 	// load cells from your CSV file (if enabled)
 	load_cells_from_pugixml(); 	
 	
+	// create some fibres 
+	
+	Fibre* pF;
+	
+	for( int n = 0 ; n < parameters.ints("number_of_fibres") ; n++ )
+		{
+			std::vector<double> fibre_start_position = {0,0,0}; 
+			fibre_start_position[0] = Xmin + UniformRandom()*Xrange; 
+			fibre_start_position[1] = Ymin + UniformRandom()*Yrange; 
+			fibre_start_position[2] = Zmin + UniformRandom()*Zrange; 
+
+			pF->assign_fibre_start_position( fibre_start_position );
+                        pF->assign_fibre_radius( parameters.ints("fibre_radius");
+                        pF->assign_fibre_length( parameters.ints("fibre_length");
+		}
+	}
+	std::cout << " fibres have been initialised at random positions" << std::endl; 
+	
+	// load cells from your CSV file (if enabled)
+	load_fibres_from_pugixml(); 
+        std::cout << " fibres have been initialised from CSV file" << std::endl; 
+	
 	return; 
 }
 
