@@ -22,10 +22,10 @@ void setup_microenvironment( void )
             )
         {
             //microenvironment.add_dirichlet_node(n,default_microenvironment_options.Dirichlet_condition_vector); 
-            microenvironment.density_vector(n) = 1.0;
+            microenvironment.density_vector(n) = {1.0};
         }
         else{
-            microenvironment.density_vector(n) = 0.0;
+            microenvironment.density_vector(n) = {0.0};
         }
          
     }
