@@ -88,7 +88,7 @@
 
 using namespace BioFVM; 
 
-namespace PhysiCell{
+namespace PhysiMess{
 class Fibre_Container;
 
 class Fibre_Parameters
