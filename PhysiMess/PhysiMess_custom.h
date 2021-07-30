@@ -102,13 +102,13 @@ class Vector_Variable
 	Vector_Variable(); 
 };
 
-class Custom_Cell_Data
+class Custom_Fibre_Data
 {
  private:
 	std::unordered_map<std::string,int> name_to_index_map; 
 //	std::unordered_map<std::string,int> vector_name_to_index_map; 
 	
-	friend std::ostream& operator<<(std::ostream& os, const Custom_Cell_Data& ccd); // done 
+	friend std::ostream& operator<<(std::ostream& os, const Custom_Fibre_Data& ccd); // done 
  public:
 	std::vector<Variable> variables; 
 	std::vector<Vector_Variable> vector_variables; 
@@ -129,8 +129,8 @@ class Custom_Cell_Data
 	double& operator[]( std::string name ); // done 
 	
 	
-	Custom_Cell_Data(); // done 
-	Custom_Cell_Data( const Custom_Cell_Data& ccd ); 
+	Custom_Fibre_Data(); // done 
+	Custom_Fibre_Data( const Custom_Fibre_Data& ccd ); 
 };
 
 }; 
