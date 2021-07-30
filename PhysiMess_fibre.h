@@ -72,8 +72,8 @@
 ###############################################################################
 */
 
-#ifndef __PhysiCell_fibre_h__
-#define __PhysiCell_fibre_h__
+#ifndef __PhysiMess_fibre_h__
+#define __PhysiMess_fibre_h__
 
 #include "./PhysiCell_custom.h" 
 
@@ -95,9 +95,7 @@ class Fibre_Parameters
 {
  private:
  public:
-	// store any fibre parameters we may need (not sure if length and radius go here yet)
-	//double fibre_radius; // fibre radius
-	//double fibre_length; // fibre length 
+	// store any fibre parameters we may need 
 	
 	Fibre_Parameters(); 
 }; 
@@ -127,14 +125,16 @@ class Fibre_State
 {
  private:
  public:
-	std::vector<Fibre*> attached_fibre; 
+        std::vector<Fibre*> attached_fibre; //- currently not going to use as fibres will not attach
+	std::vector<Fibre*> attached_cell;
 
 	std::vector<Fibre*> neighbors; // not currently tracked! 
 	std::vector<double> orientation;
 	
 	double simple_pressure; 
 	
-	int number_of_attached_fibres( void ); 
+	int number_of_attached_fibres( void ); //- currently not going to use fibre won't attach yet
+	int number_of_attached_cells( void ); 
 	
 	Fibre_State(); 
 };
@@ -159,23 +159,23 @@ class Fibre : public Basic_Agent
 	void update_motility_vector( double dt_ );
 	void advance_bundled_phenotype_functions( double dt_ ); 
 	
-	void add_potentials(Cell*);       // Add repulsive and adhesive forces.
+	void add_potentials(Fibre*);       // Add repulsive and adhesive forces.
 	void set_previous_velocity(double xV, double yV, double zV);
 	int get_current_mechanics_voxel_index();
-	void turn_off_reactions(double); 		  // Turn off all the reactions of the cell
+	void turn_off_reactions(double); 		  // Turn off all the reactions of the fibre
 	
 	bool is_out_of_domain;
 	bool is_movable;
 	
-	void flag_for_division( void ); // done 
-	void flag_for_removal( void ); // done 
+	void flag_for_division( void ); //- currently not going to use fibre will not divide
+	void flag_for_removal( void ); // - currently not going to use fibre will remain in domain
 	
-	void start_death( int death_model_index ); 
-	void lyse_fibre( void ); 
+	void start_death( int death_model_index ); //- currently not going to use
+	void lyse_fibre( void ); //- currently not going to use
 
-	Fibre* divide( void );
-	void die( void ); 
-	void step(double dt);
+	Fibre* divide( void ); //- currently not going to use
+	void die( void ); //- currently not going to use
+        void step(double dt); //- currently not going to use
 	Fibre();
 	
 	~Fibre(); 
@@ -184,14 +184,16 @@ class Fibre : public Basic_Agent
 	bool assign_position(double, double, double);
 	void set_total_volume(double);
 	
-	double& get_total_volume(void); // NEW
+	double& get_total_volume(void);
 	
-	void set_target_volume(double); 
-	void set_target_radius(double); 
-	void set_radius(double); 
+	void set_target_volume(double); //- currently not going to use fibre will be static shouldn't be needed
+	void set_target_radius(double); //- currently not going to use fibre will be static shouldn't be needed
+	
+	void set_radius(double);
+	void set_length(double);
 	
 	// mechanics 
-	void update_position( double dt ); //
+	void update_position( double dt ); //- currently not going to use fibre will be static
 	std::vector<double> displacement; // this should be moved to state, or made private  
 
 	
@@ -203,62 +205,77 @@ class Fibre : public Basic_Agent
 	void update_voxel_in_container(void);
 	void copy_data(Fibre *);
 	
-	void ingest_fibre( Fibre* pFibre_to_eat ); // for use in predation, e.g., immune cells 
+	void ingest_fibre( Fibre* pFibre_to_eat ); //- currently not going to use unlikely to use 
 
-	void attach_fibre( Fibre* pAddMe ); // done 
-	void detach_fibre( Fibre* pRemoveMe ); // done 
-	void remove_all_attached_fibres( void ); // done 
+	void attach_fibre( Fibre* pAddMe ); //- currently not going to use but later fibres may crosslink later
+	void detach_fibre( Fibre* pRemoveMe ); //- currently not going to use but later fibres may crosslink later
+	void remove_all_attached_fibres( void ); //- currently not going to use but later fibres may crosslink later
+
+	void attach_cell( Fibre* pAddMe ); 
+	void detach_cell( Fibre* pRemoveMe );  
+	void remove_all_attached_cells( void ); 
 
 	// I want to eventually deprecate this, by ensuring that 
 	// critical BioFVM and PhysiCell data elements are synced when they are needed 
 	
-	void set_phenotype( Fibre_Phenotype& phenotype ); // no longer needed?
-	void update_radius();
+	void set_phenotype( Fibre_Phenotype& phenotype ); // do we need the Fibre flag
+	void update_radius(); //- currently not going to use 
 	Fibre_Container * get_container();
 	
-	std::vector<Fibre*>& fibres_in_my_container( void ); 
-	std::vector<Fibre*> nearby_fibres( void ); 
-	std::vector<Fibre*> nearby_interacting_fibres( void );  
+	std::vector<Fibre*>& fibres_in_my_container( void ); //- currently not going to use
+	std::vector<Fibre*> nearby_fibres( void ); //- currently not going to use
+	std::vector<Fibre*> nearby_interacting_fibres( void );//- currently not going to use
+
+	std::vector<Fibre*>& cells_in_my_container( void ); 
+	std::vector<Fibre*> nearby_cells( void ); 
+	std::vector<Fibre*> nearby_interacting_cells( void ); 
 	
 	void convert_to_fibre_definition( Fibre_Definition& cd ); 
 };
 
-Cell* create_fibre( void );  
-Cell* create_fibre( Fibre_Definition& cd );  
+Fibre* create_fibre( void );  
+Fibre* create_fibre( Fibre_Definition& cd );  
 
-
-void delete_fibre( int ); 
-void delete_fibre( Cell* ); 
+void delete_fibre( int ); //- currently not going to use
+void delete_fibre( Fibre* ); //- currently not going to use
 void save_all_fibres_to_matlab( std::string filename ); 
 
-//function to check if a neighbor voxel contains any cell that can interact with me
-bool is_neighbor_voxel(Fibre* pFibre, std::vector<double> myVoxelCenter, std::vector<double> otherVoxelCenter, int otherVoxelIndex);  
+//function to check if a neighbor voxel contains any fibre that can interact with me 
+ bool is_neighbor_voxel(Fibre* pFibre, std::vector<double> myVoxelCenter, std::vector<double> otherVoxelCenter, int otherVoxelIndex); //- currently not going to use
 
+ //function to check if a neighbor voxel contains any cell that can interact with me
+bool is_neighbor_voxel(Cell* pCell, std::vector<double> myVoxelCenter, std::vector<double> otherVoxelCenter, int otherVoxelIndex);
 
 extern std::unordered_map<std::string,Fibre_Definition*> fibre_definitions_by_name; 
 extern std::unordered_map<int,Fibre_Definition*> fibre_definitions_by_type; 
-extern std::vector<Fibre_Definition*> fibre_definitions_by_index; // works 
+extern std::vector<Fibre_Definition*> fibre_definitions_by_index;  
 
-void display_fibre_definitions( std::ostream& os ); // done 
-void build_fibre_definitions_maps( void ); // done 
+void display_fibre_definitions( std::ostream& os ); 
+void build_fibre_definitions_maps( void ); 
 
-Fibre_Definition* find_fibre_definition( std::string search_string ); // done 
+Fibre_Definition* find_fibre_definition( std::string search_string ); 
 Fibre_Definition* find_fibre_definition( int search_type );  
 
-Fibre_Definition& get_fibre_definition( std::string search_string ); // done 
+Fibre_Definition& get_fibre_definition( std::string search_string ); 
 Fibre_Definition& get_fibre_definition( int search_type );  
 
 Fibre_Definition* initialize_fibre_definition_from_pugixml( pugi::xml_node cd_node ); 
 void initialize_fibre_definitions_from_pugixml( pugi::xml_node root ); 
 void initialize_fibre_definitions_from_pugixml( void );
 
-extern std::vector<double> (*fibre_division_orientation)(void);
+extern std::vector<double> (*fibre_division_orientation)(void); //- currently not going to use fibre potentially may 
 
-void attach_fibres( Fibre* pFibre_1, Cell* pFibre_2 );
-void detach_fibres( Fibre* pFibre_1 , Cell* pFibre_2 );
+void attach_fibres( Fibre* pFibre_1, Fibre* pFibre_2 ); //- currently not going to use
+void detach_fibres( Fibre* pFibre_1 , Fibre* pFibre_2 ); //- currently not going to use
 
-std::vector<Fibre*> find_nearby_fibres( Fibre* pFibre ); // new in 1.8.0
-std::vector<Fibre*> find_nearby_interacting_fibres( Fibre* pFibre ); // new in 1.8.0
+void attach_fibres( Fibre* pFibre, Cell* pCell );
+void detach_fibres( Fibre* pFibre , Cell* pCell );
+
+std::vector<Fibre*> find_nearby_fibres( Fibre* pFibre ); //- currently not going to use
+std::vector<Fibre*> find_nearby_interacting_fibres( Fibre* pFibre ); //- currently not going to use
+
+std::vector<Fibre*> find_nearby_cells( Cell* pCell ); 
+std::vector<Fibre*> find_nearby_interacting_cells( Cell* pCell ); 
 
 };
 

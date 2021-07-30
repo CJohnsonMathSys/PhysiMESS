@@ -72,8 +72,8 @@
 ###############################################################################
 */
 
-#include "PhysiCell_fibre.h"
-#include "PhysiCell_fibre_container.h"
+#include "PhysiMess_fibre.h"
+#include "PhysiMess_fibre_container.h"
 #include "PhysiCell_utilities.h"
 #include "PhysiCell_constants.h"
 #include "../BioFVM/BioFVM_vector.h" 
@@ -107,9 +107,6 @@ std::vector<double> (*fibre_division_orientation)(void) = UniformOnUnitSphere; /
 
 Fibre_Parameters::Fibre_Parameters()
 {
-	//fibre_radius=2.0; // fibre radius
-	//fibre_length=75.0; // fibre length 
-
 	return; 
 }
 
