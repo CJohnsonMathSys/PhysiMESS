@@ -95,7 +95,7 @@
 #include <algorithm>
 #include <iterator> 
 
-namespace PhysiCell{
+namespace PhysiMess{
 	
 std::unordered_map<std::string,Fibre_Definition*> fibre_definitions_by_name; 
 std::unordered_map<int,Fibre_Definition*> fibre_definitions_by_type; 
@@ -417,7 +417,7 @@ void Fibre::flag_for_division( void )
 
 void Fibre::flag_for_removal( void )
 {
-	get_container()->flag_cell_for_removal( this );
+	get_container()->flag_fibre_for_removal( this );
 	return;
 }
 
@@ -487,14 +487,14 @@ Fibre* Fibre::divide( )
 	*internalized_substrates *= 0.5; 
 	*(child->internalized_substrates) = *internalized_substrates ; 
 	
-	// The following is already performed by create_cell(). JULY 2017 ***
+	// The following is already performed by create_fibre(). JULY 2017 ***
 	// child->register_microenvironment( get_microenvironment() );
 	
 	// randomly place the new agent close to me, accounting for orientation and 
 	// polarity (if assigned)
 		
 	// May 30, 2020: 
-	// Set cell_division_orientation = LegacyRandomOnUnitSphere to 
+	// Set fibre_division_orientation = LegacyRandomOnUnitSphere to 
 	// reproduce this code 
 	/*
 	double temp_angle = 6.28318530717959*UniformRandom();
@@ -1045,7 +1045,7 @@ void delete_fibre( int index )
 	
 	// deregister agent in from the agent container
 	pDeleteMe->get_container()->remove_agent(pDeleteMe);
-	// de-allocate (delete) the cell; 
+	// de-allocate (delete) the fibre; 
 	delete pDeleteMe; 
 
 
@@ -1057,7 +1057,7 @@ void delete_fibre_original( int index ) // before June 11, 2020
 //	std::cout << __FUNCTION__ << " " << (*all_fibres)[index] 
 //	<< " " << (*all_fibres)[index]->type_name << std::endl; 
 	
-	// release any attached cells (as of 1.7.2 release)
+	// release any attached fibres (as of 1.7.2 release)
 	(*all_fibres)[index]->remove_all_attached_fibres(); 
 	
 	// released internalized substrates (as of 1.5.x releases)
@@ -1087,8 +1087,8 @@ void delete_fibre( Fibre* pDelete )
 
 bool is_neighbor_voxel(Fibre* pFibre, std::vector<double> my_voxel_center, std::vector<double> other_voxel_center, int other_voxel_index)
 {
-	double max_interactive_distance = pCell->phenotype.mechanics.relative_maximum_adhesion_distance * pCell->phenotype.geometry.radius 
-		+ pCell->get_container()->max_cell_interactive_distance_in_voxel[other_voxel_index];
+	double max_interactive_distance = pFibre->phenotype.mechanics.relative_maximum_adhesion_distance * pFibre->phenotype.geometry.radius 
+		+ pFibre->get_container()->max_fibre_interactive_distance_in_voxel[other_voxel_index];
 	
 	int comparing_dimension = -1, comparing_dimension2 = -1;
 	if(my_voxel_center[0] == other_voxel_center[0] && my_voxel_center[1] == other_voxel_center[1])
@@ -1107,7 +1107,7 @@ bool is_neighbor_voxel(Fibre* pFibre, std::vector<double> my_voxel_center, std::
 	if(comparing_dimension != -1) 
 	{ //then it is an immediate neighbor (through side faces)
 		double surface_coord= 0.5*(my_voxel_center[comparing_dimension] + other_voxel_center[comparing_dimension]);
-		if(std::fabs(pCell->position[comparing_dimension] - surface_coord) > max_interactive_distance)
+		if(std::fabs(pFibre->position[comparing_dimension] - surface_coord) > max_interactive_distance)
 		{ return false; }
 		return true;
 	}
@@ -1129,137 +1129,137 @@ bool is_neighbor_voxel(Fibre* pFibre, std::vector<double> my_voxel_center, std::
 	{
 		double line_coord1= 0.5*(my_voxel_center[comparing_dimension] + other_voxel_center[comparing_dimension]);
 		double line_coord2= 0.5*(my_voxel_center[comparing_dimension2] + other_voxel_center[comparing_dimension2]);
-		double distance_squared= std::pow( pCell->position[comparing_dimension] - line_coord1,2)+ std::pow( pCell->position[comparing_dimension2] - line_coord2,2);
+		double distance_squared= std::pow( pFibre->position[comparing_dimension] - line_coord1,2)+ std::pow( pFibre->position[comparing_dimension2] - line_coord2,2);
 		if(distance_squared > max_interactive_distance * max_interactive_distance)
 		{ return false; }
 		return true;
 	}
 	std::vector<double> corner_point= 0.5*(my_voxel_center+other_voxel_center);
-	double distance_squared= (corner_point[0]-pCell->position[0])*(corner_point[0]-pCell->position[0])
-		+(corner_point[1]-pCell->position[1])*(corner_point[1]-pCell->position[1]) 
-		+(corner_point[2]-pCell->position[2]) * (corner_point[2]-pCell->position[2]);
+	double distance_squared= (corner_point[0]-pFibre->position[0])*(corner_point[0]-pFibre->position[0])
+		+(corner_point[1]-pFibre->position[1])*(corner_point[1]-pFibre->position[1]) 
+		+(corner_point[2]-pFibre->position[2]) * (corner_point[2]-pFibre->position[2]);
 	if(distance_squared > max_interactive_distance * max_interactive_distance)
 	{ return false; }
 	return true;
 }
 
-std::vector<Cell*>& Cell::cells_in_my_container( void )
+std::vector<Fibre*>& Fibre::fibres_in_my_container( void )
 {
 	return get_container()->agent_grid[get_current_mechanics_voxel_index()];
 }
 
-std::vector<Cell*> Cell::nearby_cells( void )
-{ return find_nearby_cells( this ); }
+std::vector<Fibre*> Fibre::nearby_fibres( void )
+{ return find_nearby_fibres( this ); }
 
-std::vector<Cell*> Cell::nearby_interacting_cells( void )
-{ return find_nearby_interacting_cells( this ); }
+std::vector<Fibre*> Fibre::nearby_interacting_fibres( void )
+{ return find_nearby_interacting_fibres( this ); }
 
-void Cell::ingest_cell( Cell* pCell_to_eat )
+void Fibre::ingest_fibre( Fibre* pFibre_to_eat )
 {
-	// don't ingest a cell that's already ingested 
-	if( pCell_to_eat->phenotype.volume.total < 1e-15 || this == pCell_to_eat )
+	// don't ingest a fibre that's already ingested 
+	if( pFibre_to_eat->phenotype.volume.total < 1e-15 || this == pFibre_to_eat )
 	{ return; } 
 		
 	// make this thread safe 
 	#pragma omp critical
 	{
 		bool volume_was_zero = false; 
-		if( pCell_to_eat->phenotype.volume.total < 1e-15 )
+		if( pFibre_to_eat->phenotype.volume.total < 1e-15 )
 		{
 			volume_was_zero = true; 
 			std::cout << this << " " << this->type_name << " ingests " 
-			<< pCell_to_eat << " " << pCell_to_eat->type_name << std::endl; 
+			<< pFibre_to_eat << " " << pFibre_to_eat->type_name << std::endl; 
 		}
 		// absorb all the volume(s)
 
 		// absorb fluid volume (all into the cytoplasm) 
-		phenotype.volume.cytoplasmic_fluid += pCell_to_eat->phenotype.volume.fluid; 
-		pCell_to_eat->phenotype.volume.cytoplasmic_fluid = 0.0; 
+		phenotype.volume.cytoplasmic_fluid += pFibre_to_eat->phenotype.volume.fluid; 
+		pFibre_to_eat->phenotype.volume.cytoplasmic_fluid = 0.0; 
 		
 		// absorb nuclear and cyto solid volume (into the cytoplasm) 
-		phenotype.volume.cytoplasmic_solid += pCell_to_eat->phenotype.volume.cytoplasmic_solid; 
-		pCell_to_eat->phenotype.volume.cytoplasmic_solid = 0.0; 
+		phenotype.volume.cytoplasmic_solid += pFibre_to_eat->phenotype.volume.cytoplasmic_solid; 
+		pFibre_to_eat->phenotype.volume.cytoplasmic_solid = 0.0; 
 		
-		phenotype.volume.cytoplasmic_solid += pCell_to_eat->phenotype.volume.nuclear_solid; 
-		pCell_to_eat->phenotype.volume.nuclear_solid = 0.0; 
+		phenotype.volume.cytoplasmic_solid += pFibre_to_eat->phenotype.volume.nuclear_solid; 
+		pFibre_to_eat->phenotype.volume.nuclear_solid = 0.0; 
 		
 		// consistency calculations 
 		
 		phenotype.volume.fluid = phenotype.volume.nuclear_fluid + 
 			phenotype.volume.cytoplasmic_fluid; 
-		pCell_to_eat->phenotype.volume.fluid = 0.0; 
+		pFibre_to_eat->phenotype.volume.fluid = 0.0; 
 		
 		phenotype.volume.solid = phenotype.volume.cytoplasmic_solid + 
 			phenotype.volume.nuclear_solid; 
-		pCell_to_eat->phenotype.volume.solid = 0.0; 
+		pFibre_to_eat->phenotype.volume.solid = 0.0; 
 		
 		// no change to nuclear volume (initially) 
-		pCell_to_eat->phenotype.volume.nuclear = 0.0; 
-		pCell_to_eat->phenotype.volume.nuclear_fluid = 0.0; 
+		pFibre_to_eat->phenotype.volume.nuclear = 0.0; 
+		pFibre_to_eat->phenotype.volume.nuclear_fluid = 0.0; 
 		
 		phenotype.volume.cytoplasmic = phenotype.volume.cytoplasmic_solid + 
 			phenotype.volume.cytoplasmic_fluid; 
-		pCell_to_eat->phenotype.volume.cytoplasmic = 0.0; 
+		pFibre_to_eat->phenotype.volume.cytoplasmic = 0.0; 
 		
 		phenotype.volume.total = phenotype.volume.nuclear + 
 			phenotype.volume.cytoplasmic; 
-		pCell_to_eat->phenotype.volume.total = 0.0; 
+		pFibre_to_eat->phenotype.volume.total = 0.0; 
 
 		phenotype.volume.fluid_fraction = phenotype.volume.fluid / 
 			(  phenotype.volume.total + 1e-16 ); 
-		pCell_to_eat->phenotype.volume.fluid_fraction = 0.0; 
+		pFibre_to_eat->phenotype.volume.fluid_fraction = 0.0; 
 
 		phenotype.volume.cytoplasmic_to_nuclear_ratio = phenotype.volume.cytoplasmic_solid / 
 			( phenotype.volume.nuclear_solid + 1e-16 );
 			
 		// update corresponding BioFVM parameters (self-consistency) 
 		set_total_volume( phenotype.volume.total ); 
-		pCell_to_eat->set_total_volume( 0.0 ); 
+		pFibre_to_eat->set_total_volume( 0.0 ); 
 		
 		// absorb the internalized substrates 
 		
 		// multiply by the fraction that is supposed to be ingested (for each substrate) 
-		*(pCell_to_eat->internalized_substrates) *= 
-			*(pCell_to_eat->fraction_transferred_when_ingested); // 
+		*(pFibre_to_eat->internalized_substrates) *= 
+			*(pFibre_to_eat->fraction_transferred_when_ingested); // 
 		
-		*internalized_substrates += *(pCell_to_eat->internalized_substrates); 
+		*internalized_substrates += *(pFibre_to_eat->internalized_substrates); 
 		static int n_substrates = internalized_substrates->size(); 
-		pCell_to_eat->internalized_substrates->assign( n_substrates , 0.0 ); 	
+		pFibre_to_eat->internalized_substrates->assign( n_substrates , 0.0 ); 	
 		
 		// trigger removal from the simulation 
-		// pCell_to_eat->die(); // I don't think this is safe if it's in an OpenMP loop 
+		// pFibre_to_eat->die(); // I don't think this is safe if it's in an OpenMP loop 
 		
 		// flag it for removal 
-		// pCell_to_eat->flag_for_removal(); 
+		// pFibre_to_eat->flag_for_removal(); 
 		// mark it as dead 
-		pCell_to_eat->phenotype.death.dead = true; 
+		pFibre_to_eat->phenotype.death.dead = true; 
 		// set secretion and uptake to zero 
-		pCell_to_eat->phenotype.secretion.set_all_secretion_to_zero( );  
-		pCell_to_eat->phenotype.secretion.set_all_uptake_to_zero( ); 
+		pFibre_to_eat->phenotype.secretion.set_all_secretion_to_zero( );  
+		pFibre_to_eat->phenotype.secretion.set_all_uptake_to_zero( ); 
 		
 		// deactivate all custom function 
-		pCell_to_eat->functions.custom_cell_rule = NULL; 
-		pCell_to_eat->functions.update_phenotype = NULL; 
-		pCell_to_eat->functions.contact_function = NULL; 
+		pFibre_to_eat->functions.custom_fibre_rule = NULL; 
+		pFibre_to_eat->functions.update_phenotype = NULL; 
+		pFibre_to_eat->functions.contact_function = NULL; 
 
 		// remove all adhesions 
-		// pCell_to_eat->remove_all_attached_cells();
+		// pFibre_to_eat->remove_all_attached_fibres();
 		
-		// set cell as unmovable and non-secreting 
-		pCell_to_eat->is_movable = false; 
-		pCell_to_eat->is_active = false; 
+		// set fibre as unmovable and non-secreting 
+		pFibre_to_eat->is_movable = false; 
+		pFibre_to_eat->is_active = false; 
 	}
 
 	// things that have their own thread safety 
-	pCell_to_eat->flag_for_removal();
-	pCell_to_eat->remove_all_attached_cells();
+	pFibre_to_eat->flag_for_removal();
+	pFibre_to_eat->remove_all_attached_fibres();
 	
 	return; 
 }
 
-void Cell::lyse_cell( void )
+void Fibre::lyse_fibre( void )
 {
-	// don't lyse a cell that's already lysed 
+	// don't lyse a fibre that's already lysed 
 	if( phenotype.volume.total < 1e-15 )
 	{ return; } 	
 	
@@ -1274,44 +1274,44 @@ void Cell::lyse_cell( void )
 	phenotype.secretion.set_all_uptake_to_zero( ); 
 	
 	// deactivate all custom function 
-	functions.custom_cell_rule = NULL; 
+	functions.custom_fibre_rule = NULL; 
 	functions.update_phenotype = NULL; 
 	functions.contact_function = NULL; 
 	
 	// remove all adhesions 
-	
-	remove_all_attached_cells(); 
+	remove_all_attached_cell();
+	remove_all_attached_fibres(); 
 	
 	// set volume to zero 
 	set_total_volume( 0.0 ); 
 
-	// set cell as unmovable and non-secreting 
+	// set fibre as unmovable and non-secreting 
 	is_movable = false; 
 	is_active = false; 	
 
 	return; 
 }
 
-bool cell_definitions_by_name_constructed = false; 
+bool fibre_definitions_by_name_constructed = false; 
 
-void build_cell_definitions_maps( void )
+void build_fibre_definitions_maps( void )
 {
-//	cell_definitions_by_name.
-//	cell_definitions_by_index
+//	fibre_definitions_by_name.
+//	fibre_definitions_by_index
 
-	for( int n=0; n < cell_definitions_by_index.size() ; n++ )
+	for( int n=0; n < fibre_definitions_by_index.size() ; n++ )
 	{
-		Cell_Definition* pCD = cell_definitions_by_index[n]; 
-		cell_definitions_by_name[ pCD->name ] = pCD; 
-		cell_definitions_by_type[ pCD->type ] = pCD; 
+		Fibre_Definition* pCD = fibre_definitions_by_index[n]; 
+		fibre_definitions_by_name[ pCD->name ] = pCD; 
+		fibre_definitions_by_type[ pCD->type ] = pCD; 
 	}
 
-	cell_definitions_by_name_constructed = true; 
+	fibre_definitions_by_name_constructed = true; 
 	
 	return;
 }
 
-void display_ptr_as_bool( void (*ptr)(Cell*,Phenotype&,double), std::ostream& os )
+void display_ptr_as_bool( void (*ptr)(Fibre*,Phenotype&,double), std::ostream& os )
 {
 	if( ptr )
 	{ os << "true"; return; }
@@ -1319,7 +1319,7 @@ void display_ptr_as_bool( void (*ptr)(Cell*,Phenotype&,double), std::ostream& os
 	return;
 }
 
-void display_ptr_as_bool( void (*ptr)(Cell*,Phenotype&,Cell*,Phenotype&,double), std::ostream& os )
+void display_ptr_as_bool( void (*ptr)(Fibre*,Phenotype&,Fibre*,Phenotype&,double), std::ostream& os )
 {
 	if( ptr )
 	{ os << "true"; return; }
@@ -1327,11 +1327,11 @@ void display_ptr_as_bool( void (*ptr)(Cell*,Phenotype&,Cell*,Phenotype&,double),
 	return;
 }
 
-void display_cell_definitions( std::ostream& os )
+void display_fibre_definitions( std::ostream& os )
 {
-	for( int n=0; n < cell_definitions_by_index.size() ; n++ )
+	for( int n=0; n < fibre_definitions_by_index.size() ; n++ )
 	{
-		Cell_Definition* pCD = cell_definitions_by_index[n]; 
+		Fibre_Definition* pCD = fibre_definitions_by_index[n]; 
 		os << n << " :: type:" << pCD->type << " name: " << pCD->name << std::endl; 
 
 		// summarize cycle model 
@@ -1396,11 +1396,11 @@ void display_cell_definitions( std::ostream& os )
 		}
 		
 		// summarize functions 
-		Cell_Functions* pCF = &(pCD->functions); 
+		Fibre_Functions* pCF = &(pCD->functions); 
 		os << "\t key functions: " << std::endl; 
 		os << "\t\t migration bias rule: "; display_ptr_as_bool( pCF->update_migration_bias , std::cout ); 
 		os << std::endl; 
-		os << "\t\t custom rule: "; display_ptr_as_bool( pCF->custom_cell_rule , std::cout ); 
+		os << "\t\t custom rule: "; display_ptr_as_bool( pCF->custom_fibre_rule , std::cout ); 
 		os << std::endl; 
 		os << "\t\t phenotype rule: "; display_ptr_as_bool( pCF->update_phenotype , std::cout ); 
 		os << std::endl; 
@@ -1445,7 +1445,7 @@ void display_cell_definitions( std::ostream& os )
 		// size 
 	
 		
-		Custom_Cell_Data* pCCD = &(pCD->custom_data); 
+		Custom_Fibre_Data* pCCD = &(pCD->custom_data); 
 		os << "\tcustom data: " << std::endl; 
 		for( int k=0; k < pCCD->variables.size(); k++)
 		{
@@ -1463,98 +1463,98 @@ void display_cell_definitions( std::ostream& os )
 	return; 
 }
 
-Cell_Definition* find_cell_definition( std::string search_string )
+Fibre_Definition* find_fibre_definition( std::string search_string )
 {
 	// if the registry isn't built yet, then do it! 
-	if( cell_definitions_by_name_constructed == false )
+	if( fibre_definitions_by_name_constructed == false )
 	{
-		build_cell_definitions_maps(); 
+		build_fibre_definitions_maps(); 
 	}
 	
-	Cell_Definition* output = NULL;
-	if( cell_definitions_by_name.count( search_string ) > 0 )
+	Fibre_Definition* output = NULL;
+	if( fibre_definitions_by_name.count( search_string ) > 0 )
 	{ 
-		output = cell_definitions_by_name.find( search_string )->second; 
+		output = fibre_definitions_by_name.find( search_string )->second; 
 	} 
 	
 	if( output == NULL )
 	{
-		std::cout << "Warning! Cell_Definition for " << search_string << " not found!" << std::endl; 
+		std::cout << "Warning! Fibre_Definition for " << search_string << " not found!" << std::endl; 
 	}
 	
 	return output; 	
 }
 
-Cell_Definition* find_cell_definition( int search_type )
+Fibre_Definition* find_fibre_definition( int search_type )
 {
 	// if the registry isn't built yet, then do it! 
-	if( cell_definitions_by_name_constructed == false )
+	if( fibre_definitions_by_name_constructed == false )
 	{
-		build_cell_definitions_maps(); 
+		build_fibre_definitions_maps(); 
 	}
 	
-	Cell_Definition* output = NULL;
-	if( cell_definitions_by_type.count( search_type ) > 0 )
+	Fibre_Definition* output = NULL;
+	if( fibre_definitions_by_type.count( search_type ) > 0 )
 	{ 
-		output = cell_definitions_by_type.find( search_type )->second; 
+		output = fibre_definitions_by_type.find( search_type )->second; 
 	} 
 	
 	if( output == NULL )
 	{
-		std::cout << "Warning! Cell_Definition for " << search_type << " not found!" << std::endl; 
+		std::cout << "Warning! Fibre_Definition for " << search_type << " not found!" << std::endl; 
 	}
 	
 	return output; 	
 }
 
-Cell_Definition& get_cell_definition( std::string search_string )
+Fibre_Definition& get_fibre_definition( std::string search_string )
 {
 	// if the registry isn't built yet, then do it! 
-	if( cell_definitions_by_name_constructed == false )
+	if( fibre_definitions_by_name_constructed == false )
 	{
-		build_cell_definitions_maps(); 
+		build_fibre_definitions_maps(); 
 	}
 	
-	if( cell_definitions_by_name.count( search_string ) > 0 )
+	if( fibre_definitions_by_name.count( search_string ) > 0 )
 	{ 
-		return *(cell_definitions_by_name.find( search_string )->second ); 
+		return *(fibre_definitions_by_name.find( search_string )->second ); 
 	} 
 	
-	std::cout << "Warning! Cell_Definition for " << search_string << " not found!" << std::endl; 
-	std::cout << "Returning the default cell definition instead ... " << std::endl; 
+	std::cout << "Warning! Fibre_Definition for " << search_string << " not found!" << std::endl; 
+	std::cout << "Returning the default fibre definition instead ... " << std::endl; 
 	
-	return cell_defaults; 	
+	return fibre_defaults; 	
 }
 
-Cell_Definition& get_cell_definition( int search_type )
+Fibre_Definition& get_fibre_definition( int search_type )
 {
 	// if the registry isn't built yet, then do it! 
-	if( cell_definitions_by_name_constructed == false )
+	if( fibre_definitions_by_name_constructed == false )
 	{
-		build_cell_definitions_maps(); 
+		build_fibre_definitions_maps(); 
 	}
 	
-	if( cell_definitions_by_type.count( search_type ) > 0 )
+	if( fibre_definitions_by_type.count( search_type ) > 0 )
 	{ 
-		return *(cell_definitions_by_type.find( search_type )->second); 
+		return *(fibre_definitions_by_type.find( search_type )->second); 
 	} 
 	
-	std::cout << "Warning! Cell_Definition for " << search_type << " not found!" << std::endl; 
-	std::cout << "Returning the default cell definition instead ... " << std::endl; 
+	std::cout << "Warning! Fibre_Definition for " << search_type << " not found!" << std::endl; 
+	std::cout << "Returning the default fibre definition instead ... " << std::endl; 
 	
-	return cell_defaults; 	
+	return fibre_defaults; 	
 }
 
-Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node )
+Fibre_Definition* initialize_fibre_definition_from_pugixml( pugi::xml_node cd_node )
 {
-	Cell_Definition* pCD; 
+	Fibre_Definition* pCD; 
 	
 	// if this is not "default" then create a new one 
 	if( std::strcmp( cd_node.attribute( "name" ).value() , "default" ) != 0 
 	    && std::strcmp( cd_node.attribute( "ID" ).value() , "0" ) != 0 )
-	{ pCD = new Cell_Definition; }
+	{ pCD = new Fibre_Definition; }
 	else
-	{ pCD = &cell_defaults; }
+	{ pCD = &fibre_defaults; }
 	
 	// set the name 
 	pCD->name = cd_node.attribute("name").value();
@@ -1566,12 +1566,12 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	{ pCD->type = -1; } 
 
 	// get the parent definition (if any) 
-	Cell_Definition* pParent = NULL;
+	Fibre_Definition* pParent = NULL;
 	if( cd_node.attribute( "parent_type" ) )
-	{ pParent = find_cell_definition( cd_node.attribute( "parent_type" ).value() ); }
+	{ pParent = find_fibre_definition( cd_node.attribute( "parent_type" ).value() ); }
 	// if it's not the default and no parent stated, inherit from default 
-	if( pParent == NULL && pCD != &cell_defaults )
-	{ pParent = &cell_defaults; } 
+	if( pParent == NULL && pCD != &fibre_defaults )
+	{ pParent = &fibre_defaults; } 
 
 	// if we found something to inherit from, then do it! 
 	if( pParent != NULL )
@@ -1592,7 +1592,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	// figure out if this ought to be 2D
 	if( default_microenvironment_options.simulate_2D )
 	{
-		std::cout << "Note: setting cell definition to 2D based on microenvironment domain settings ... "
+		std::cout << "Note: setting fibre definition to 2D based on microenvironment domain settings ... "
 		<< std::endl; 
 		pCD->functions.set_orientation = up_orientation; 
 		pCD->phenotype.geometry.polarity = 1.0; 
@@ -1609,7 +1609,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	pCD->parameters.pReference_live_phenotype = &(pCD->phenotype); 
 	pugi::xml_node node = cd_node.child( "phenotype" ); 
 
-	// set up the cell cycle 
+	// set up the fibre cycle 
 	// make sure the standard cycle models are defined 
 	create_standard_cycle_and_death_models();
 
@@ -1650,15 +1650,15 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
             {
                 pCD->functions.cycle_model = live;  // ?
                 std::cout << "Warning: live_apoptotic_cycle_model not directly supported." << std::endl		
-                            << "         Substituting live cells model. Set death rates=0." << std::endl; 
+                            << "         Substituting live fibres model. Set death rates=0." << std::endl; 
             }
-            else if (model == PhysiCell_constants::total_cells_cycle_model) 
+            else if (model == PhysiCell_constants::total_fibres_cycle_model) 
             {
                 pCD->functions.cycle_model = live; 
-                std::cout << "Warning: total_cells_cycle_model not directly supported." << std::endl		
-                            << "         Substituting live cells model. Set death rates=0." << std::endl; 
+                std::cout << "Warning: total_fibres_cycle_model not directly supported." << std::endl		
+                            << "         Substituting live fibres model. Set death rates=0." << std::endl; 
             }
-            else if (model == PhysiCell_constants::live_cells_cycle_model) 
+            else if (model == PhysiCell_constants::live_fibres_cycle_model) 
             {
                 pCD->functions.cycle_model = live; 
             }
@@ -1679,7 +1679,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			pCD->phenotype.cycle.sync_to_cycle_model( pCD->functions.cycle_model ); 
 		}
 		
-		// now, if we inherited from another cell, AND 
+		// now, if we inherited from another fibre, AND 
 		// if that parent type has the same cylce model, 
 		// then overwrite with their transition rates 
 		
@@ -2090,13 +2090,13 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	{
 		Mechanics* pM = &(pCD->phenotype.mechanics);
 		
-		pugi::xml_node node_mech = node.child( "cell_cell_adhesion_strength" );
+		pugi::xml_node node_mech = node.child( "fibre_fibre_adhesion_strength" );
 		if( node_mech )
-		{ pM->cell_cell_adhesion_strength = xml_get_my_double_value( node_mech ); }	
+		{ pM->fibre_fibre_adhesion_strength = xml_get_my_double_value( node_mech ); }	
 
-		node_mech = node.child( "cell_cell_repulsion_strength" );
+		node_mech = node.child( "fibre_fibre_repulsion_strength" );
 		if( node_mech )
-		{ pM->cell_cell_repulsion_strength = xml_get_my_double_value( node_mech ); }	
+		{ pM->fibre_fibre_repulsion_strength = xml_get_my_double_value( node_mech ); }	
 
 		node_mech = node.child( "relative_maximum_adhesion_distance" );
 		if( node_mech )
@@ -2159,7 +2159,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			
 			if( default_microenvironment_options.simulate_2D )
 			{
-				std::cout << "Note: Overriding to set cell motility to 2D based on " 
+				std::cout << "Note: Overriding to set fibre motility to 2D based on " 
 							<< "microenvironment domain settings ... "
 				<< std::endl; 				
 				pMot->restrict_to_2D = true; 
@@ -2333,7 +2333,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 		std::string str_values = xml_get_my_string_value( node1 ); 
 		csv_to_vector( str_values.c_str() , values ); 
 		
-		// add variable if cell defaults  
+		// add variable if fibre defaults  
 		// if the custom data is not yet found, add it 
 		// first, try scalar 
 		if( values.size() == 1 )
@@ -2366,7 +2366,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	return pCD;
 }
 
-void initialize_cell_definitions_from_pugixml( pugi::xml_node root )
+void initialize_fibre_definitions_from_pugixml( pugi::xml_node root )
 {
 	pugi::xml_node node_options; 
 	
@@ -2378,72 +2378,72 @@ void initialize_cell_definitions_from_pugixml( pugi::xml_node root )
 		if( settings )
 		{
 			std::cout << "virtual_wall_at_domain_edge: enabled" << std::endl; 
-			cell_defaults.functions.add_cell_basement_membrane_interactions = standard_domain_edge_avoidance_interactions;
+			fibre_defaults.functions.add_fibre_basement_membrane_interactions = standard_domain_edge_avoidance_interactions;
 		}
 	}
 	
-	pugi::xml_node node = root.child( "cell_definitions" ); 
+	pugi::xml_node node = root.child( "fibre_definitions" ); 
 	
-	node = node.child( "cell_definition" ); 
+	node = node.child( "fibre_definition" ); 
 	
 	while( node )
 	{
 		std::cout << "Processing " << node.attribute( "name" ).value() << " ... " << std::endl; 
 		
-		initialize_cell_definition_from_pugixml( node );	
-		build_cell_definitions_maps(); 
+		initialize_fibre_definition_from_pugixml( node );	
+		build_fibre_definitions_maps(); 
 		
-		node = node.next_sibling( "cell_definition" ); 
+		node = node.next_sibling( "fibre_definition" ); 
 	}
 	
-//	build_cell_definitions_maps(); 
-//	display_cell_definitions( std::cout ); 
+//	build_fibre_definitions_maps(); 
+//	display_fibre_definitions( std::cout ); 
 	
 	return; 
 }	
 
-void initialize_cell_definitions_from_pugixml( void )
+void initialize_fibre_definitions_from_pugixml( void )
 {
-	initialize_cell_definitions_from_pugixml( physicell_config_root );
+	initialize_fibre_definitions_from_pugixml( physicell_config_root );
 	return; 
 }
 
-int Cell_State::number_of_attached_cells( void )
-{ return attached_cells.size(); } 
+int Fibre_State::number_of_attached_fibres( void )
+{ return attached_fibres.size(); } 
 
-void Cell::attach_cell( Cell* pAddMe )
+void Fibre::attach_fibre( Fibre* pAddMe )
 {
 	#pragma omp critical
 	{
 		bool already_attached = false; 
-		for( int i=0 ; i < state.attached_cells.size() ; i++ )
+		for( int i=0 ; i < state.attached_fibres.size() ; i++ )
 		{
-			if( state.attached_cells[i] == pAddMe )
+			if( state.attached_fibres[i] == pAddMe )
 			{ already_attached = true; }
 		}
 		if( already_attached == false )
-		{ state.attached_cells.push_back( pAddMe ); }
+		{ state.attached_fibres.push_back( pAddMe ); }
 	}
-	// pAddMe->attach_cell( this ); 
+	// pAddMe->attach_fibre( this ); 
 	return; 
 }
 
-void Cell::detach_cell( Cell* pRemoveMe )
+void Fibre::detach_fibre( Fibre* pRemoveMe )
 {
 	#pragma omp critical
 	{
 		bool found = false; 
 		int i = 0; 
-		while( !found && i < state.attached_cells.size() )
+		while( !found && i < state.attached_fibres.size() )
 		{
-			// if pRemoveMe is in the cell's list, remove it
-			if( state.attached_cells[i] == pRemoveMe )
+			// if pRemoveMe is in the fibre's list, remove it
+			if( state.attached_fibres[i] == pRemoveMe )
 			{
-				int n = state.attached_cells.size(); 
+				int n = state.attached_fibres.size(); 
 				// copy last entry to current position 
-				state.attached_cells[i] = state.attached_cells[n-1]; 
+				state.attached_fibres[i] = state.attached_fibres[n-1]; 
 				// shrink by one 
-				state.attached_cells.pop_back(); 
+				state.attached_fibres.pop_back(); 
 				found = true; 
 			}
 			i++; 
@@ -2452,100 +2452,100 @@ void Cell::detach_cell( Cell* pRemoveMe )
 	return; 
 }
 
-void Cell::remove_all_attached_cells( void )
+void Fibre::remove_all_attached_fibres( void )
 {
 	{
-		// remove self from any attached cell's list. 
-		for( int i = 0; i < state.attached_cells.size() ; i++ )
+		// remove self from any attached fibre's list. 
+		for( int i = 0; i < state.attached_fibres.size() ; i++ )
 		{
-			state.attached_cells[i]->detach_cell( this ); 
+			state.attached_fibres[i]->detach_fibre( this ); 
 		}
 		// clear my list 
-		state.attached_cells.clear(); 
+		state.attached_fibres.clear(); 
 	}
 	return; 
 }
 
-void attach_cells( Cell* pCell_1, Cell* pCell_2 )
+void attach_fibres( Fibre* pFibre_1, Fibre* pFibre_2 )
 {
-	pCell_1->attach_cell( pCell_2 );
-	pCell_2->attach_cell( pCell_1 );
+	pFibre_1->attach_fibre( pFibre_2 );
+	pFibre_2->attach_fibre( pFibre_1 );
 	return; 
 }
 
-void detach_cells( Cell* pCell_1 , Cell* pCell_2 )
+void detach_fibres( Fibre* pFibre_1 , Fibre* pFibre_2 )
 {
-	pCell_1->detach_cell( pCell_2 );
-	pCell_2->detach_cell( pCell_1 );
+	pFibre_1->detach_fibre( pFibre_2 );
+	pFibre_2->detach_fibre( pFibre_1 );
 	return; 
 }
 
-std::vector<Cell*> find_nearby_cells( Cell* pCell )
+std::vector<Fibre*> find_nearby_fibres( Fibre* pFibre )
 {
-	std::vector<Cell*> neighbors = {}; 
+	std::vector<Fibre*> neighbors = {}; 
 
 	// First check the neighbors in my current voxel
-	std::vector<Cell*>::iterator neighbor;
-	std::vector<Cell*>::iterator end =
-		pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
-	for( neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); neighbor != end; ++neighbor)
+	std::vector<Fibre*>::iterator neighbor;
+	std::vector<Fibre*>::iterator end =
+		pFibre->get_container()->agent_grid[pFibre->get_current_mechanics_voxel_index()].end();
+	for( neighbor = pFibre->get_container()->agent_grid[pFibre->get_current_mechanics_voxel_index()].begin(); neighbor != end; ++neighbor)
 	{ neighbors.push_back( *neighbor ); }
 
 	std::vector<int>::iterator neighbor_voxel_index;
 	std::vector<int>::iterator neighbor_voxel_index_end = 
-		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].end();
+		pFibre->get_container()->underlying_mesh.moore_connected_voxel_indices[pFibre->get_current_mechanics_voxel_index()].end();
 	
 	for( neighbor_voxel_index = 
-		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].begin();
+		pFibre->get_container()->underlying_mesh.moore_connected_voxel_indices[pFibre->get_current_mechanics_voxel_index()].begin();
 		neighbor_voxel_index != neighbor_voxel_index_end; 
 		++neighbor_voxel_index )
 	{
-		if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[*neighbor_voxel_index].center, *neighbor_voxel_index))
+		if(!is_neighbor_voxel(pFibre, pFibre->get_container()->underlying_mesh.voxels[pFibre->get_current_mechanics_voxel_index()].center, pFibre->get_container()->underlying_mesh.voxels[*neighbor_voxel_index].center, *neighbor_voxel_index))
 			continue;
-		end = pCell->get_container()->agent_grid[*neighbor_voxel_index].end();
-		for(neighbor = pCell->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
+		end = pFibre->get_container()->agent_grid[*neighbor_voxel_index].end();
+		for(neighbor = pFibre->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
 		{ neighbors.push_back( *neighbor ); }
 	}
 	
 	return neighbors; 
 }
 
-std::vector<Cell*> find_nearby_interacting_cells( Cell* pCell )
+std::vector<Fibre*> find_nearby_interacting_fibres( Fibre* pFibre )
 {
-	std::vector<Cell*> neighbors = {}; 
+	std::vector<Fibre*> neighbors = {}; 
 
 	// First check the neighbors in my current voxel
-	std::vector<Cell*>::iterator neighbor;
-	std::vector<Cell*>::iterator end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
-	for( neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); neighbor != end; ++neighbor)
+	std::vector<Fibre*>::iterator neighbor;
+	std::vector<Fibre*>::iterator end = pFibre->get_container()->agent_grid[pFibre->get_current_mechanics_voxel_index()].end();
+	for( neighbor = pFibre->get_container()->agent_grid[pFibre->get_current_mechanics_voxel_index()].begin(); neighbor != end; ++neighbor)
 	{
-		std::vector<double> displacement = (*neighbor)->position - pCell->position; 
+		std::vector<double> displacement = (*neighbor)->position - pFibre->position; 
 		double distance = norm( displacement ); 
-		if( distance <= pCell->phenotype.mechanics.relative_maximum_adhesion_distance * pCell->phenotype.geometry.radius 
+		if( distance <= pFibre->phenotype.mechanics.relative_maximum_adhesion_distance * pFibre->phenotype.geometry.radius 
 			+ (*neighbor)->phenotype.mechanics.relative_maximum_adhesion_distance * (*neighbor)->phenotype.geometry.radius 
-			&& (*neighbor) != pCell )
+			&& (*neighbor) != pFibre )
 		{ neighbors.push_back( *neighbor ); }
 	}
 
 	std::vector<int>::iterator neighbor_voxel_index;
 	std::vector<int>::iterator neighbor_voxel_index_end = 
-		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].end();
+		pFibre->get_container()->underlying_mesh.moore_connected_voxel_indices[pFibre->get_current_mechanics_voxel_index()].end();
 	
 	for( neighbor_voxel_index = 
-		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].begin();
+		pFibre->get_container()->underlying_mesh.moore_connected_voxel_indices[pFibre->get_current_mechanics_voxel_index()].begin();
 		neighbor_voxel_index != neighbor_voxel_index_end; 
 		++neighbor_voxel_index )
 	{
-		if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[*neighbor_voxel_index].center, *neighbor_voxel_index))
+		if(!is_neighbor_voxel(pFibre, pFibre->get_container()->underlying_mesh.voxels[pFibre->get_current_mechanics_voxel_index()].center, pFibre->get_container()->underlying_mesh.voxels[*neighbor_voxel_index].center, *neighbor_voxel_index))
 			continue;
-		end = pCell->get_container()->agent_grid[*neighbor_voxel_index].end();
-		for(neighbor = pCell->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
+		end = pFibre->get_container()->agent_grid[*neighbor_voxel_index].end();
+		for(neighbor = pFibre->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
 		{
-			std::vector<double> displacement = (*neighbor)->position - pCell->position; 
+			std::vector<double> displacement = (*neighbor)->position - pFibre->position; 
 			double distance = norm( displacement ); 
-			if( distance <= pCell->phenotype.mechanics.relative_maximum_adhesion_distance * pCell->phenotype.geometry.radius 
+			if( distance <= pFibre->phenotype.mechanics.relative_maximum_adhesion_distance * pFibre->phenotype.geometry.radius 
 				+ (*neighbor)->phenotype.mechanics.relative_maximum_adhesion_distance * (*neighbor)->phenotype.geometry.radius
-				&& (*neighbor) != pCell	)
+				&& (*neighbor) != pFibre	)
 			{ neighbors.push_back( *neighbor ); }
 		}
 	}
