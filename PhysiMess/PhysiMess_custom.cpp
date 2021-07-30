@@ -107,7 +107,7 @@ std::ostream& operator<<(std::ostream& os, const Vector_Variable& v)
 }
 
 	
-Custom_Cell_Data::Custom_Cell_Data()
+Custom_Fibre_Data::Custom_Fibre_Data()
 {
 //	std::cout << __FUNCTION__ << "(default)" << std::endl; 
 	variables.resize(0); 
@@ -119,7 +119,7 @@ Custom_Cell_Data::Custom_Cell_Data()
 	return;
 }
 
-Custom_Cell_Data::Custom_Cell_Data( const Custom_Cell_Data& ccd )
+Custom_Fibre_Data::Custom_Fibre_Data( const Custom_Fibre_Data& ccd )
 {
 //	std::cout << __FUNCTION__ << "(copy)" << std::endl; 
 	variables = ccd.variables; 
@@ -130,7 +130,7 @@ Custom_Cell_Data::Custom_Cell_Data( const Custom_Cell_Data& ccd )
 	return; 
 }
 
-int Custom_Cell_Data::add_variable( Variable& v )
+int Custom_Fibre_Data::add_variable( Variable& v )
 {
 	int n = variables.size(); 
 	variables.push_back( v ); 
@@ -138,7 +138,7 @@ int Custom_Cell_Data::add_variable( Variable& v )
 	return n; 
 }
 
-int Custom_Cell_Data::add_variable( std::string name , std::string units , double value )
+int Custom_Fibre_Data::add_variable( std::string name , std::string units , double value )
 {
 	int n = variables.size(); 
 	variables.resize( n+1 ); 
@@ -149,7 +149,7 @@ int Custom_Cell_Data::add_variable( std::string name , std::string units , doubl
 	return n; 
 }
 
-int Custom_Cell_Data::add_variable( std::string name , double value )
+int Custom_Fibre_Data::add_variable( std::string name , double value )
 {
 	int n = variables.size(); 
 	variables.resize( n+1 ); 
@@ -160,7 +160,7 @@ int Custom_Cell_Data::add_variable( std::string name , double value )
 	return n; 
 }
 
-int Custom_Cell_Data::add_vector_variable( Vector_Variable& v )
+int Custom_Fibre_Data::add_vector_variable( Vector_Variable& v )
 {
 	int n = vector_variables.size(); 
 	vector_variables.push_back( v ); 
@@ -168,7 +168,7 @@ int Custom_Cell_Data::add_vector_variable( Vector_Variable& v )
 	return n; 
 }
 
-int Custom_Cell_Data::add_vector_variable( std::string name , std::string units , std::vector<double>& value )
+int Custom_Fibre_Data::add_vector_variable( std::string name , std::string units , std::vector<double>& value )
 {
 	int n = vector_variables.size(); 
 	vector_variables.resize( n+1 ); 
@@ -179,7 +179,7 @@ int Custom_Cell_Data::add_vector_variable( std::string name , std::string units 
 	return n; 
 }
 
-int Custom_Cell_Data::add_vector_variable( std::string name , std::vector<double>& value )
+int Custom_Fibre_Data::add_vector_variable( std::string name , std::vector<double>& value )
 {
 	int n = vector_variables.size(); 
 	vector_variables.resize( n+1 ); 
@@ -190,7 +190,7 @@ int Custom_Cell_Data::add_vector_variable( std::string name , std::vector<double
 	return n; 
 }
 
-int Custom_Cell_Data::find_variable_index( std::string name )
+int Custom_Fibre_Data::find_variable_index( std::string name )
 {
 	// this should return -1 if not found, not zero 
 	auto out = name_to_index_map.find( name ); 
@@ -200,13 +200,13 @@ int Custom_Cell_Data::find_variable_index( std::string name )
 }
 
 /*
-int Custom_Cell_Data::find_vector_variable_index( std::string name )
+int Custom_Fibre_Data::find_vector_variable_index( std::string name )
 {
 	return vector_name_to_index_map[ name ]; 
 }
 */
 
-int Custom_Cell_Data::find_vector_variable_index( std::string name )
+int Custom_Fibre_Data::find_vector_variable_index( std::string name )
 {
 	int n = 0; 
 	while( n < vector_variables.size() )
@@ -220,17 +220,17 @@ int Custom_Cell_Data::find_vector_variable_index( std::string name )
 }
 
 
-double& Custom_Cell_Data::operator[](int i)
+double& Custom_Fibre_Data::operator[](int i)
 {
 	return variables[i].value; 
 }
 
-double& Custom_Cell_Data::operator[]( std::string name )
+double& Custom_Fibre_Data::operator[]( std::string name )
 {
 	return variables[ name_to_index_map[name] ].value; 
 }
 
-std::ostream& operator<<(std::ostream& os, const Custom_Cell_Data& ccd)
+std::ostream& operator<<(std::ostream& os, const Custom_Fibre_Data& ccd)
 {
 	os << "Custom data (scalar): " << std::endl; 
 	for( int i=0 ; i < ccd.variables.size() ; i++ )
