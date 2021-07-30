@@ -65,8 +65,8 @@
 ###############################################################################
 */
 
-#ifndef __PhysiCell_phenotype_h__
-#define __PhysiCell_phenotype_h__
+#ifndef __PhysiCell_phenotype_fibre_h__
+#define __PhysiCell_phenotype_fibre_h__
 
 #include <vector>
 #include <string>
@@ -79,7 +79,7 @@
 
 using namespace BioFVM; 
 
-namespace PhysiCell{
+namespace PhysiMESS{
 class Fibre;
 //class Cycle_Model;
 class Phenotype_Fibre;
