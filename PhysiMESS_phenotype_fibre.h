@@ -65,8 +65,8 @@
 ###############################################################################
 */
 
-#ifndef __PhysiCell_phenotype_fibre_h__
-#define __PhysiCell_phenotype_fibre_h__
+#ifndef __PhysiMESS_phenotype_fibre_h__
+#define __PhysiMESS_phenotype_fibre_h__
 
 #include <vector>
 #include <string>
