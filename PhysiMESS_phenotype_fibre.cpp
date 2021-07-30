@@ -65,7 +65,7 @@
 ###############################################################################
 */
 
-#include "./PhysiCell_phenotype_fibre.h"
+#include "./PhysiMESS_phenotype_fibre.h"
 
 #include "../BioFVM/BioFVM.h"
 #include "./PhysiCell_constants.h"
