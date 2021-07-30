@@ -65,7 +65,7 @@
 ###############################################################################
 */
 
-#include "./PhysiCell_phenotype.h"
+#include "./PhysiCell_phenotype_fibre.h"
 
 #include "../BioFVM/BioFVM.h"
 #include "./PhysiCell_constants.h"
@@ -635,8 +635,8 @@ Fibre_Geometry::Fibre_Geometry()
 {
     // reference values for fibres, based on
     // volume = 942 cubic microns
-    fibre_radius = 2;
-    fibre_length = 75;
+    fibre_radius = 1.12; // 0.133*8.4127
+    fibre_length = 42.06; // 5* 8.4127
     
     return;
     
