@@ -510,18 +510,17 @@ void SVG_plot( std::string filename , Microenvironment& M, double z_slice , doub
 
         double plot_radius = sqrt( r*r - z*z );
   
-        if(pC->type_name == "bacteria")
+        if(pC->type_name == "fibres")
         {
-            // then normal cell, plot sphere
-
-            Write_SVG_circle( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower,
-                plot_radius , 0.5, Colors[1], Colors[0] );
-            
-        }
-        else{
             // then fibre, plot cylinder
 
             Write_SVG_fibre( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower,
+                plot_radius , 0.5, Colors[1], Colors[0] );
+        }
+        else{
+            // then normal cell, plot sphere
+
+            Write_SVG_circle( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower,
                 plot_radius , 0.5, Colors[1], Colors[0] );
         }
             os << "   </g>" << std::endl;
