@@ -170,8 +170,8 @@ void setup_tissue( void )
 			
 			pC = create_cell( *pCD ); 
 			pC->assign_position( position );
-			pC->assign_position( orientation );
-			pC->assign_position( length );
+			//pC->assign_position( orientation );
+			//pC->assign_position(  parameters.ints("length") );
 		}
 	}
 	std::cout << std::endl; 
