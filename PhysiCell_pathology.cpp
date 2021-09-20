@@ -515,8 +515,8 @@ void SVG_plot( std::string filename , Microenvironment& M, double z_slice , doub
            // then fibre, plot line
 
             //Write_SVG_fibre( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower, plot_radius , 0.5, Colors[1], Colors[0] );
-	   Write_SVG_line( os, (pC->position)[0]-25*UniformRandom()-X_lower, (pC->position)[1]-25*UniformRandom()-Y_lower, (pC->position)[0]+25*UniformRandom()-X_lower, (pC->position)[1]+25*UniformRandom()-Y_lower, 2.0, Colors[0]);
-           //Write_SVG_line( os, (pC->position)[0]-(pC->length)*(pC->orientation)[0]-X_lower, (pC->position)[1]-(pC->length)*(pC->orientation)[1]-Y_lower, (pC->position)[0]+(pC->length)*(pC->orientation)[0]-X_lower, (pC->position)[1]+(pC->length)*(pC->orientation)[1]-Y_lower, 2.0, Colors[0]);
+	   //Write_SVG_line( os, (pC->position)[0]-25*UniformRandom()-X_lower, (pC->position)[1]-25*UniformRandom()-Y_lower, (pC->position)[0]+25*UniformRandom()-X_lower, (pC->position)[1]+25*UniformRandom()-Y_lower, 2.0, Colors[0]);
+           Write_SVG_line( os, (pC->position)[0]-(pC->parameters.mLength)*(pC->state.orientation)[0]-X_lower, (pC->position)[1]-(pC->parameters.mLength)*(pC->state.orientation)[1]-Y_lower, (pC->position)[0]+(pC->parameters.mLength)*(pC->orientation)[0]-X_lower, (pC->position)[1]+(pC->parameters.mLength)*(pC->orientation)[1]-Y_lower, 2.0, Colors[0]);
            
         }
         else{

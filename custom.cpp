@@ -66,6 +66,7 @@
 */
 
 #include "./custom.h"
+#include <math.h>  
 
 void create_cell_types( void )
 {
@@ -170,8 +171,85 @@ void setup_tissue( void )
 			
 			pC = create_cell( *pCD ); 
 			pC->assign_position( position );
-			//pC->assign_orientation( orientation );
+
+			double normalRandom = sqrt(-2*log(UniformRandom()))*cos(UniformRandom()*6.28318530717959);
+
+			double fibreLength = 25*normalRandom;
+
+			pC->parameters.mLength = fibreLength;
+
+			pC->assign_orientation(); // sets the default orientation of random 2D 
+			/*
+			void Cell::assign_orientation()
+			{
+				state.orientation.resize(3,0.0);
+				if( functions.set_orientation != NULL )
+				{
+					functions.set_orientation(this, phenotype, 0.0 );
+				}
+				else
+				{
+					//assign a random unit vector
+					double theta= UniformRandom()*6.28318530717959; //rand*2*pi
+					double z= 2* UniformRandom()-1;
+					double temp= sqrt(1-z*z);
+					state.orientation[0]= temp * cos(theta);
+					state.orientation[1]= temp * sin(theta);
+					state.orientation[2]= z;
+				}
+				
+				return; 
+			}
+			*/
+			
+			// if wanted more control, call like this 
+			// double a=0;
+			// double b=0;
+			// pc->state.orientation[0] = a
+			// pc->state.orientation[1] = b
+
 			//pC->assign_length(  parameters.ints("length") );
+
+
+			// setup code form initialising Fibres 2, Cicely 20th sepetember 2021
+
+			double xv=UniformRandom();
+			double yv=UniformRandom();
+			//double zv=UniformRandom();
+			double norm=sqrt(xv*xv+yv*yv); //double norm=sqrt(xv*xv+yv*yv+zv*zv);
+			std::vector<double> orientation = {0,0,0};
+
+			pc->state.orientation[0]=xv/norm;
+			pc->state.orientation[1]=yv/norm;
+			//pc->state.orientation[2]=zv/norm;
+
+			double xs=position[0]-pC->parameters.mLength;
+			double xe=position[0]+pC->parameters.mLength;
+			double ys=position[1]-pC->parameters.mLength;
+			double ye=position[1]+pC->parameters.mLength;
+			//double zs=position[2]-0.0;
+			//double ze=position[2]+0.0;
+
+			while(xs<Xmin||xe>Xmax)
+			{
+				std::cout<<"!!! ...trying again !!!"<<std::endl;
+				position[0]=Xmin+UniformRandom()*Xrange;
+				xs=position[0]-pC->parameters.mLength;
+				xe=position[0]+pC->parameters.mLength;
+			}
+
+			while(ys<Ymin||ye>Ymax)
+			{
+				std::cout<<"!!! ...trying again !!!"<<std::endl;
+				position[1]=Ymin+UniformRandom()*Yrange;
+				ys=position[1]-pC->parameters.mLength;
+				ye=position[1]+pC->parameters.mLength;
+			}
+
+
+
+
+
 		}
 	}
 	std::cout << std::endl; 
