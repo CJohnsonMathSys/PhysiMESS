@@ -66,7 +66,6 @@
 */
 
 #include "./custom.h"
-#include <math.h>  
 
 void create_cell_types( void )
 {
@@ -162,93 +161,54 @@ void setup_tissue( void )
 	{
 		Cell_Definition* pCD = cell_definitions_by_index[k]; 
 		std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
-		for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ )
-		{
-			std::vector<double> position = {0,0,0}; 
-			position[0] = Xmin + UniformRandom()*Xrange; 
-			position[1] = Ymin + UniformRandom()*Yrange; 
-			position[2] = Zmin + UniformRandom()*Zrange; 
-			
-			pC = create_cell( *pCD ); 
-			pC->assign_position( position );
+		for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ ) {
+            std::vector<double> position = {0, 0, 0};
+            position[0] = Xmin + UniformRandom() * Xrange;
+            position[1] = Ymin + UniformRandom() * Yrange;
+            position[2] = Zmin + UniformRandom() * Zrange;
 
-			double normalRandom = sqrt(-2*log(UniformRandom()))*cos(UniformRandom()*6.28318530717959);
+            pC = create_cell( *pCD );
 
-			double fibreLength = 25*normalRandom;
-
-			pC->parameters.mLength = fibreLength;
-
-			pC->assign_orientation(); // sets the default orientation of random 2D 
-			/*
-			void Cell::assign_orientation()
-			{
-				state.orientation.resize(3,0.0);
-				if( functions.set_orientation != NULL )
-				{
-					functions.set_orientation(this, phenotype, 0.0 );
-				}
-				else
-				{
-					//assign a random unit vector
-					double theta= UniformRandom()*6.28318530717959; //rand*2*pi
-					double z= 2* UniformRandom()-1;
-					double temp= sqrt(1-z*z);
-					state.orientation[0]= temp * cos(theta);
-					state.orientation[1]= temp * sin(theta);
-					state.orientation[2]= z;
-				}
-				
-				return; 
-			}
-			*/
-			
-			// if wanted more control, call like this 
-			// double a=0;
-			// double b=0;
-			// pc->state.orientation[0] = a
-			// pc->state.orientation[1] = b
-
-			//pC->assign_length(  parameters.ints("length") );
+            //set fibre length as normally distributed around 75
+            double fibreLength = NormalRandom(75.,5.);
+            pC->parameters.mLength = fibreLength/2.0;
 
 
-			// setup code form initialising Fibres 2, Cicely 20th sepetember 2021
+            if(pCD->name == "fibres") {
 
-			double xv=UniformRandom();
-			double yv=UniformRandom();
-			//double zv=UniformRandom();
-			double norm=sqrt(xv*xv+yv*yv); //double norm=sqrt(xv*xv+yv*yv+zv*zv);
-			std::vector<double> orientation = {0,0,0};
+                pC->assign_orientation(); // sets the default orientation of random 2D
+                pC->state.orientation = UniformOnUnitCircle();
 
-			pc->state.orientation[0]=xv/norm;
-			pc->state.orientation[1]=yv/norm;
-			//pc->state.orientation[2]=zv/norm;
+                // note for now using +/- 150 as waiting for fibre orientation (back-end)
+                double xs = position[0] - pC->parameters.mLength*pC->state.orientation[0];
+                double xe = position[0] + pC->parameters.mLength*pC->state.orientation[0];
+                double ys = position[1] - pC->parameters.mLength*pC->state.orientation[1];
+                double ye = position[1] + pC->parameters.mLength*pC->state.orientation[1];
+                double zs = position[2] - 0.0;
+                double ze = position[2] + 0.0;
 
-			double xs=position[0]-pC->parameters.mLength;
-			double xe=position[0]+pC->parameters.mLength;
-			double ys=position[1]-pC->parameters.mLength;
-			double ye=position[1]+pC->parameters.mLength;
-			//double zs=position[2]-0.0;
-			//double ze=position[2]+0.0;
+                while (xs < Xmin || xe > Xmax) {
+                    std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
+                    position[0] = Xmin + UniformRandom() * Xrange;
+                    xs = position[0] - pC->parameters.mLength*pC->state.orientation[0];
+                    xe = position[0] + pC->parameters.mLength*pC->state.orientation[0];
+                }
 
-			while(xs<Xmin||xe>Xmax)
-			{
-				std::cout<<"!!! ...trying again !!!"<<std::endl;
-				position[0]=Xmin+UniformRandom()*Xrange;
-				xs=position[0]-pC->parameters.mLength;
-				xe=position[0]+pC->parameters.mLength;
-			}
+                while (ys < Ymin || ye > Ymax) {
+                    std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
+                    position[1] = Ymin + UniformRandom() * Yrange;
+                    ys = position[1] - pC->parameters.mLength*pC->state.orientation[1];
+                    ye = position[1] + pC->parameters.mLength*pC->state.orientation[1];
+                }
 
-			while(ys<Ymin||ye>Ymax)
-			{
-				std::cout<<"!!! ...trying again !!!"<<std::endl;
-				position[1]=Ymin+UniformRandom()*Yrange;
-				ys=position[1]-pC->parameters.mLength;
-				ye=position[1]+pC->parameters.mLength;
-			}
-
-
-
-
+                while (zs < Zmin || ze > Zmax) {
+                    std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
+                    position[2] = Zmin + UniformRandom() * Zrange;
+                    zs = position[2] - 0.0;
+                    ze = position[2] + 0.0;
+                }
+            }
+            pC->assign_position( position );
 
 		}
 	}
