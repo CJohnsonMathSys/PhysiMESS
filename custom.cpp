@@ -67,6 +67,8 @@
 
 #include "./custom.h"
 #include <math.h>  
+#include <chrono>
+#include <random>
 
 void create_cell_types( void )
 {
@@ -172,9 +174,16 @@ void setup_tissue( void )
 			pC = create_cell( *pCD ); 
 			pC->assign_position( position );
 
-			double normalRandom = sqrt(-2*log(UniformRandom()))*cos(UniformRandom()*6.28318530717959);
 
-			double fibreLength = 25*normalRandom;
+			// gerneate normal distributed length (there will be an easier way of this - connah)	
+			double fibre_length_mean = 25;
+			double fibre_length_standard_deviation = 0.1*25;
+
+			unsigned seed = chrono::system_clock::now().time_since_epoch().count();
+    		default_random_engine generator(seed);
+    		normal_distribution<double> distribution(fibre_length_mean, fibre_length_standard_deviation);
+
+			double fibreLength = distribution(generator);
 
 			pC->parameters.mLength = fibreLength;
 
