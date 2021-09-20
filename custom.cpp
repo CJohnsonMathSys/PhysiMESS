@@ -166,15 +166,10 @@ void setup_tissue( void )
 		std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
 		for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ )
 		{
-			std::vector<double> position = {0,0,0}; 
-			position[0] = Xmin + UniformRandom()*Xrange; 
-			position[1] = Ymin + UniformRandom()*Yrange; 
-			position[2] = Zmin + UniformRandom()*Zrange; 
+			
 			
 			pC = create_cell( *pCD ); 
-			pC->assign_position( position );
-
-
+			
 			// gerneate normal distributed length (there will be an easier way of this - connah)	
 			double fibre_length_mean = 25;
 			double fibre_length_standard_deviation = 0.1*25;
@@ -222,11 +217,14 @@ void setup_tissue( void )
 
 			// setup code form initialising Fibres 2, Cicely 20th sepetember 2021
 
+			std::vector<double> orientation = {0,0,0};
+			std::vector<double> position = {0,0,0}; 
+
 			double xv=UniformRandom();
 			double yv=UniformRandom();
 			//double zv=UniformRandom();
 			double norm=sqrt(xv*xv+yv*yv); //double norm=sqrt(xv*xv+yv*yv+zv*zv);
-			std::vector<double> orientation = {0,0,0};
+			
 
 			pc->state.orientation[0]=xv/norm;
 			pc->state.orientation[1]=yv/norm;
@@ -256,7 +254,7 @@ void setup_tissue( void )
 			}
 
 
-
+			pC->assign_position( position );
 
 
 		}
