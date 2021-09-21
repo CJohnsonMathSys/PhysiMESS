@@ -510,14 +510,14 @@ void SVG_plot( std::string filename , Microenvironment& M, double z_slice , doub
 
         double plot_radius = sqrt( r*r - z*z );
   
-        if(pC->type_name == "fibres")
+        if(pC->type_name == "fibre")
         {
            // then fibre, plot line
 
             //Write_SVG_fibre( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower, plot_radius , 0.5, Colors[1], Colors[0] );
-	   //Write_SVG_line( os, (pC->position)[0]-25*UniformRandom()-X_lower, (pC->position)[1]-25*UniformRandom()-Y_lower, (pC->position)[0]+25*UniformRandom()-X_lower, (pC->position)[1]+25*UniformRandom()-Y_lower, 2.0, Colors[0]);
-           Write_SVG_line( os, (pC->position)[0]-(pC->parameters.mLength)*(pC->state.orientation)[0]-X_lower, (pC->position)[1]-(pC->parameters.mLength)*(pC->state.orientation)[1]-Y_lower, (pC->position)[0]+(pC->parameters.mLength)*(pC->orientation)[0]-X_lower, (pC->position)[1]+(pC->parameters.mLength)*(pC->orientation)[1]-Y_lower, 2.0, Colors[0]);
-           
+            Write_SVG_line( os, (pC->position)[0]-(pC->parameters.mLength)*(pC->state.orientation)[0]-X_lower, (pC->position)[1]-(pC->parameters.mLength)*(pC->state.orientation)[1]-Y_lower, (pC->position)[0]+(pC->parameters.mLength)*(pC->state.orientation)[0]-X_lower, (pC->position)[1]+(pC->parameters.mLength)*(pC->state.orientation)[1]-Y_lower, 2.0, Colors[0]);
+            //Write_SVG_line( os, (pC->position)[0]-(pC->parameters.mLength)-X_lower, (pC->position)[1]-(pC->parameters.mLength)-Y_lower, (pC->position)[0]+(pC->parameters.mLength)-X_lower, (pC->position)[1]+(pC->parameters.mLength)-Y_lower, 2.0, Colors[0]);
+
         }
         else{
             // then normal cell, plot sphere
@@ -704,7 +704,7 @@ void create_plot_legend( std::string filename , std::vector<std::string> (*cell_
         std::vector<std::string> colors = cell_coloring_function(pCell);
 
 	// place a rod if it's a fibre
-	if(pCell->type_name == "fibres")
+	if(pCell->type_name == "fibre")
         {
         //Write_SVG_fibre(os, cursor_x, cursor_y , 0.5*temp_cell_radius , 1.0 , colors[1] , colors[0] );
 	Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[1] );
