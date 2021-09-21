@@ -510,7 +510,7 @@ void SVG_plot( std::string filename , Microenvironment& M, double z_slice , doub
 
         double plot_radius = sqrt( r*r - z*z );
   
-        if(pC->type_name == "fibres")
+        if(pC->type_name == "fibre")
         {
            // then fibre, plot line
 
@@ -704,7 +704,7 @@ void create_plot_legend( std::string filename , std::vector<std::string> (*cell_
         std::vector<std::string> colors = cell_coloring_function(pCell);
 
 	// place a rod if it's a fibre
-	if(pCell->type_name == "fibres")
+	if(pCell->type_name == "fibre")
         {
         //Write_SVG_fibre(os, cursor_x, cursor_y , 0.5*temp_cell_radius , 1.0 , colors[1] , colors[0] );
 	Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[1] );

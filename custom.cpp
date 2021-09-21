@@ -169,17 +169,17 @@ void setup_tissue( void )
 
             pC = create_cell( *pCD );
 
-            //set fibre length as normally distributed around 75
-            double fibreLength = NormalRandom(75.,5.);
-            pC->parameters.mLength = fibreLength/2.0;
+            if(pCD->name == "fibre") {
 
+                //set fibre length as normally distributed around 75
+                double fibreLength = NormalRandom(75.,5.);
+                pC->parameters.mLength = fibreLength/2.0;
 
-            if(pCD->name == "fibres") {
+                //assign fibre orientation as a random vector from points on unit sphere.
+                pC->assign_orientation();
+                pC->state.orientation = UniformOnUnitSphere();
 
-                pC->assign_orientation(); // sets the default orientation of random 2D
-                pC->state.orientation = UniformOnUnitCircle();
-
-                // note for now using +/- 150 as waiting for fibre orientation (back-end)
+                // start and end points of a fibre are calculated from fibre center
                 double xs = position[0] - pC->parameters.mLength*pC->state.orientation[0];
                 double xe = position[0] + pC->parameters.mLength*pC->state.orientation[0];
                 double ys = position[1] - pC->parameters.mLength*pC->state.orientation[1];
@@ -187,6 +187,7 @@ void setup_tissue( void )
                 double zs = position[2] - 0.0;
                 double ze = position[2] + 0.0;
 
+                // check whether a fibre end point leaves the domain and if so initialise fibre again
                 while (xs < Xmin || xe > Xmax) {
                     std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
                     position[0] = Xmin + UniformRandom() * Xrange;
@@ -208,6 +209,7 @@ void setup_tissue( void )
                     ze = position[2] + 0.0;
                 }
             }
+
             pC->assign_position( position );
 
 		}
