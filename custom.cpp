@@ -174,43 +174,51 @@ void setup_tissue( void )
                 //set fibre length as normally distributed around 75
                 double fibreLength = NormalRandom(75.,5.);
                 pC->parameters.mLength = fibreLength/2.0;
+                //std::cout << " fibre length is " << fibreLength << std::endl;
 
                 //assign fibre orientation as a random vector from points on unit sphere.
                 pC->assign_orientation();
-                pC->state.orientation = UniformOnUnitSphere();
+                pC->state.orientation = UniformOnUnitCircle();
+                pC->state.orientation[2] = 0.0;
+                //std::cout << "fibre orientation is " << pC->state.orientation[0] << " " << pC->state.orientation[1] << " " << pC->state.orientation[2] << std::endl;
 
                 // start and end points of a fibre are calculated from fibre center
                 double xs = position[0] - pC->parameters.mLength*pC->state.orientation[0];
                 double xe = position[0] + pC->parameters.mLength*pC->state.orientation[0];
                 double ys = position[1] - pC->parameters.mLength*pC->state.orientation[1];
                 double ye = position[1] + pC->parameters.mLength*pC->state.orientation[1];
-                double zs = position[2] - 0.0;
-                double ze = position[2] + 0.0;
+                double zs = position[2] - pC->parameters.mLength*pC->state.orientation[2];
+                double ze = position[2] + pC->parameters.mLength*pC->state.orientation[2];
+                //std::cout << "fibre endpoints are " << xs << " " << ys << " -> " << xe << " " << ye << std::endl;
 
                 // check whether a fibre end point leaves the domain and if so initialise fibre again
-                while (xs < Xmin || xe > Xmax) {
+                while (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax) {
+                    //std::cout << "fibre position is " << xs-Xmin << " " << xe-Xmin << " " << std::endl;
                     std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
                     position[0] = Xmin + UniformRandom() * Xrange;
                     xs = position[0] - pC->parameters.mLength*pC->state.orientation[0];
                     xe = position[0] + pC->parameters.mLength*pC->state.orientation[0];
+                    //std::cout << "new fibre position is " << xs-Xmin << " " << xe-Xmin << " " << std::endl;
                 }
 
-                while (ys < Ymin || ye > Ymax) {
+                while (ys < Ymin || ye > Ymax || ye < Xmin || ys > Xmax) {
+                    //std::cout << "fibre position is " << ys-Ymin << " " << ye-Ymin << " " << std::endl;
                     std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
                     position[1] = Ymin + UniformRandom() * Yrange;
                     ys = position[1] - pC->parameters.mLength*pC->state.orientation[1];
                     ye = position[1] + pC->parameters.mLength*pC->state.orientation[1];
+                    //std::cout << "new fibre position is " << ys-Ymin << " " << ye-Ymin << " " << std::endl;
                 }
 
-                while (zs < Zmin || ze > Zmax) {
+                while (zs < Zmin || ze > Zmax || ze < Xmin || zs > Xmax) {
                     std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
                     position[2] = Zmin + UniformRandom() * Zrange;
                     zs = position[2] - 0.0;
                     ze = position[2] + 0.0;
                 }
             }
-
             pC->assign_position( position );
+            std::cout << "fibre position is " << position[0] << " " << position[1] << " " << position[2] << std::endl;
 
 		}
 	}
