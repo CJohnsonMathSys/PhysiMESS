@@ -63,61 +63,44 @@
 # POSSIBILITY OF SUCH DAMAGE.                                                 #
 #                                                                             #
 ###############################################################################
+# THIS NEW AGENT CLASS WAS CREATED BY                                         #
+#                                                                             #
+# Zoe Bell; Temitope Benson; Connah Johnson; Cicely Macnamara; James O'Neill; #
+# Robyn Shuttleworth; Niki Tavakoli                                           #
+#                                                                             #
+# as part of WS2021 (Cluster 5)                                               #
+###############################################################################
 */
 
-#ifndef __PhysiCell_cell_h__
-#define __PhysiCell_cell_h__
+#ifndef __PhysiMess_fibre_h__
+#define __PhysiMess_fibre_h__
 
 #include "./PhysiCell_custom.h" 
 
 #include "../BioFVM/BioFVM.h"
-#include "./PhysiCell_phenotype.h"
-#include "./PhysiCell_cell_container.h"
+#include "./PhysiCell_phenotype_fibre.h"
+#include "./PhysiCell_fibre_container.h" // do we actually need a different container?
 #include "./PhysiCell_constants.h"
 
 #include "../modules/PhysiCell_settings.h" 
 
-#include "./PhysiCell_standard_models.h" 
+#include "./PhysiCell_standard_models.h"
 
 using namespace BioFVM; 
 
-namespace PhysiCell{
-class Cell_Container;
+namespace PhysiMess{
+class Fibre_Container;
 
-class Cell_Parameters
+class Fibre_Parameters
 {
  private:
  public:
-	// oxygen values (in mmHg) for critical phenotype changes
-	double o2_hypoxic_threshold; // value at which hypoxic signaling starts
-	double o2_hypoxic_response; // value at which omics changes are observed 
-	double o2_hypoxic_saturation; // value at which hypoxic signalign saturates 
-	// o2_hypoxic_saturation < o2_hypoxic_threshold
+	// store any fibre parameters we may need 
 	
-	double o2_proliferation_saturation; // value at which extra o2 does not increase proliferation
-	double o2_proliferation_threshold; // value at which o2 is sufficient for proliferation
-
-	double o2_reference; // physioxic reference value, in the linked reference Phenotype
-	// o2_proliferation_threshold < o2_reference < o2_proliferation_saturation; 
-	
-	double o2_necrosis_threshold; // value at which cells start experiencing necrotic death 
-	double o2_necrosis_max; // value at which necrosis reaches its maximum rate 
-	// o2_necrosis_max < o2_necrosis_threshold
-	
-	Phenotype* pReference_live_phenotype; // reference live phenotype (typically physioxic) 
-	// Phenotype* pReference_necrotic_phenotype; // reference live phenotype (typically physioxic) 
-
-	// necrosis parameters (may evenually be moved into a reference necrotic phenotype 
-	double max_necrosis_rate; // deprecate
-	int necrosis_type; // deprecate 
-	
-	double mLength=0;
-
-
-	Cell_Parameters(); 
+	Fibre_Parameters(); 
 }; 
 
-class Cell_Definition
+class Fibre_Definition
 {
  private:
  public: 
@@ -126,156 +109,173 @@ class Cell_Definition
  
 	Microenvironment* pMicroenvironment; 
 	
-	Cell_Parameters parameters; 
-	Custom_Cell_Data custom_data; 
-	Cell_Functions functions; 
-	Phenotype phenotype; 
+	Fibre_Parameters parameters; 
+	Custom_Fibre_Data custom_data; 
+	Fibre_Functions functions; 
+	Fibre_Phenotype phenotype; // not sure if we want this as Phenotype_Fibre instead as per Robyns files
 
-	Cell_Definition();  // done 
-	Cell_Definition( Cell_Definition& cd ); // copy constructor 
-	Cell_Definition& operator=( const Cell_Definition& cd ); // copy assignment 
+	Fibre_Definition();  // done 
+	Fibre_Definition( Fibre_Definition& cd ); // copy constructor 
+	Fibre_Definition& operator=( const Fibre_Definition& cd ); // copy assignment 
 };
 
-extern Cell_Definition cell_defaults; 
+extern Fibre_Definition fibre_defaults; 
 
-class Cell_State
+class Fibre_State
 {
  private:
  public:
-	std::vector<Cell*> attached_cells; 
+        std::vector<Fibre*> attached_fibre; //- currently not going to use as fibres will not attach
+	std::vector<Fibre*> attached_cell;
 
-	std::vector<Cell*> neighbors; // not currently tracked! 
+	std::vector<Fibre*> neighbors; // not currently tracked! 
 	std::vector<double> orientation;
 	
 	double simple_pressure; 
 	
+	int number_of_attached_fibres( void ); //- currently not going to use fibre won't attach yet
 	int number_of_attached_cells( void ); 
 	
-	Cell_State(); 
+	Fibre_State(); 
 };
 
-class Cell : public Basic_Agent 
+class Fibre : public Basic_Agent 
 {
  private: 
-	Cell_Container * container;
+	Fibre_Container * container;
 	int current_mechanics_voxel_index;
 	int updated_current_mechanics_voxel_index; // keeps the updated voxel index for later adjusting of current voxel index
 		
  public:
 	std::string type_name; 
  
-	Custom_Cell_Data custom_data;
-	Cell_Parameters parameters;
-	Cell_Functions functions; 
+	Custom_Fibre_Data custom_data;
+	Fibre_Parameters parameters;
+	Fibre_Functions functions; 
 
-	Cell_State state; 
-	Phenotype phenotype; 
+	Fibre_State state; 
+	Fibre_Phenotype phenotype; // not sure if we want this as Phenotype_Fibre instead
 	
 	void update_motility_vector( double dt_ );
 	void advance_bundled_phenotype_functions( double dt_ ); 
 	
-	void add_potentials(Cell*);       // Add repulsive and adhesive forces.
+	void add_potentials(Fibre*);       // Add repulsive and adhesive forces.
 	void set_previous_velocity(double xV, double yV, double zV);
 	int get_current_mechanics_voxel_index();
-	void turn_off_reactions(double); 		  // Turn off all the reactions of the cell
+	void turn_off_reactions(double); 		  // Turn off all the reactions of the fibre
 	
 	bool is_out_of_domain;
 	bool is_movable;
 	
-	void flag_for_division( void ); // done 
-	void flag_for_removal( void ); // done 
+	void flag_for_division( void ); //- currently not going to use fibre will not divide
+	void flag_for_removal( void ); // - currently not going to use fibre will remain in domain
 	
-	void start_death( int death_model_index ); 
-	void lyse_cell( void ); 
+	void start_death( int death_model_index ); //- currently not going to use
+	void lyse_fibre( void ); //- currently not going to use
 
-	Cell* divide( void );
-	void die( void ); 
-	void step(double dt);
-	Cell();
+	Fibre* divide( void ); //- currently not going to use
+	void die( void ); //- currently not going to use
+        void step(double dt); //- currently not going to use
+	Fibre();
 	
-	~Cell(); 
+	~Fibre(); 
 	
 	bool assign_position(std::vector<double> new_position);
 	bool assign_position(double, double, double);
 	void set_total_volume(double);
 	
-	double& get_total_volume(void); // NEW
+	double& get_total_volume(void);
 	
-	void set_target_volume(double); 
-	void set_target_radius(double); 
-	void set_radius(double); 
+	void set_target_volume(double); //- currently not going to use fibre will be static shouldn't be needed
+	void set_target_radius(double); //- currently not going to use fibre will be static shouldn't be needed
 	
-	
+	void set_radius(double);
+	void set_length(double);
 	
 	// mechanics 
-	void update_position( double dt ); //
+	void update_position( double dt ); //- currently not going to use fibre will be static
 	std::vector<double> displacement; // this should be moved to state, or made private  
 
 	
 	void assign_orientation();  // if set_orientaion is defined, uses it to assign the orientation
 								// otherwise, it assigns a random orientation to the cell.
 	
-	void copy_function_pointers(Cell*);
+	void copy_function_pointers(Fibre*);
 	
 	void update_voxel_in_container(void);
-	void copy_data(Cell *);
+	void copy_data(Fibre *);
 	
-	void ingest_cell( Cell* pCell_to_eat ); // for use in predation, e.g., immune cells 
+	void ingest_fibre( Fibre* pFibre_to_eat ); //- currently not going to use unlikely to use 
 
-	void attach_cell( Cell* pAddMe ); // done 
-	void detach_cell( Cell* pRemoveMe ); // done 
-	void remove_all_attached_cells( void ); // done 
+	void attach_fibre( Fibre* pAddMe ); //- currently not going to use but later fibres may crosslink later
+	void detach_fibre( Fibre* pRemoveMe ); //- currently not going to use but later fibres may crosslink later
+	void remove_all_attached_fibres( void ); //- currently not going to use but later fibres may crosslink later
+
+	void attach_cell( Fibre* pAddMe ); 
+	void detach_cell( Fibre* pRemoveMe );  
+	void remove_all_attached_cells( void ); 
 
 	// I want to eventually deprecate this, by ensuring that 
 	// critical BioFVM and PhysiCell data elements are synced when they are needed 
 	
-	void set_phenotype( Phenotype& phenotype ); // no longer needed?
-	void update_radius();
-	Cell_Container * get_container();
+	void set_phenotype( Fibre_Phenotype& phenotype ); // do we need the Fibre flag
+	void update_radius(); //- currently not going to use 
+	Fibre_Container * get_container();
 	
-	std::vector<Cell*>& cells_in_my_container( void ); 
-	std::vector<Cell*> nearby_cells( void ); // new in 1.8.0 
-	std::vector<Cell*> nearby_interacting_cells( void ); // new in 1.8.0 
+	std::vector<Fibre*>& fibres_in_my_container( void ); //- currently not going to use
+	std::vector<Fibre*> nearby_fibres( void ); //- currently not going to use
+	std::vector<Fibre*> nearby_interacting_fibres( void );//- currently not going to use
+
+	std::vector<Fibre*>& cells_in_my_container( void ); 
+	std::vector<Fibre*> nearby_cells( void ); 
+	std::vector<Fibre*> nearby_interacting_cells( void ); 
 	
-	void convert_to_cell_definition( Cell_Definition& cd ); 
+	void convert_to_fibre_definition( Fibre_Definition& cd ); 
 };
 
-Cell* create_cell( void );  
-Cell* create_cell( Cell_Definition& cd );  
+Fibre* create_fibre( void );  
+Fibre* create_fibre( Fibre_Definition& cd );  
 
+void delete_fibre( int ); //- currently not going to use
+void delete_fibre( Fibre* ); //- currently not going to use
+void save_all_fibres_to_matlab( std::string filename ); 
 
-void delete_cell( int ); 
-void delete_cell( Cell* ); 
-void save_all_cells_to_matlab( std::string filename ); 
+//function to check if a neighbor voxel contains any fibre that can interact with me 
+ bool is_neighbor_voxel(Fibre* pFibre, std::vector<double> myVoxelCenter, std::vector<double> otherVoxelCenter, int otherVoxelIndex); //- currently not going to use
 
-//function to check if a neighbor voxel contains any cell that can interact with me
-bool is_neighbor_voxel(Cell* pCell, std::vector<double> myVoxelCenter, std::vector<double> otherVoxelCenter, int otherVoxelIndex);  
+ //function to check if a neighbor voxel contains any cell that can interact with me
+bool is_neighbor_voxel(Cell* pCell, std::vector<double> myVoxelCenter, std::vector<double> otherVoxelCenter, int otherVoxelIndex);
 
+extern std::unordered_map<std::string,Fibre_Definition*> fibre_definitions_by_name; 
+extern std::unordered_map<int,Fibre_Definition*> fibre_definitions_by_type; 
+extern std::vector<Fibre_Definition*> fibre_definitions_by_index;  
 
-extern std::unordered_map<std::string,Cell_Definition*> cell_definitions_by_name; 
-extern std::unordered_map<int,Cell_Definition*> cell_definitions_by_type; 
-extern std::vector<Cell_Definition*> cell_definitions_by_index; // works 
+void display_fibre_definitions( std::ostream& os ); 
+void build_fibre_definitions_maps( void ); 
 
-void display_cell_definitions( std::ostream& os ); // done 
-void build_cell_definitions_maps( void ); // done 
+Fibre_Definition* find_fibre_definition( std::string search_string ); 
+Fibre_Definition* find_fibre_definition( int search_type );  
 
-Cell_Definition* find_cell_definition( std::string search_string ); // done 
-Cell_Definition* find_cell_definition( int search_type );  
+Fibre_Definition& get_fibre_definition( std::string search_string ); 
+Fibre_Definition& get_fibre_definition( int search_type );  
 
-Cell_Definition& get_cell_definition( std::string search_string ); // done 
-Cell_Definition& get_cell_definition( int search_type );  
+Fibre_Definition* initialize_fibre_definition_from_pugixml( pugi::xml_node cd_node ); 
+void initialize_fibre_definitions_from_pugixml( pugi::xml_node root ); 
+void initialize_fibre_definitions_from_pugixml( void );
 
-Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node ); 
-void initialize_cell_definitions_from_pugixml( pugi::xml_node root ); 
-void initialize_cell_definitions_from_pugixml( void );
+extern std::vector<double> (*fibre_division_orientation)(void); //- currently not going to use fibre potentially may 
 
-extern std::vector<double> (*cell_division_orientation)(void);
+void attach_fibres( Fibre* pFibre_1, Fibre* pFibre_2 ); //- currently not going to use
+void detach_fibres( Fibre* pFibre_1 , Fibre* pFibre_2 ); //- currently not going to use
 
-void attach_cells( Cell* pCell_1, Cell* pCell_2 );
-void detach_cells( Cell* pCell_1 , Cell* pCell_2 );
+void attach_fibres( Fibre* pFibre, Cell* pCell );
+void detach_fibres( Fibre* pFibre , Cell* pCell );
 
-std::vector<Cell*> find_nearby_cells( Cell* pCell ); // new in 1.8.0
-std::vector<Cell*> find_nearby_interacting_cells( Cell* pCell ); // new in 1.8.0
+std::vector<Fibre*> find_nearby_fibres( Fibre* pFibre ); //- currently not going to use
+std::vector<Fibre*> find_nearby_interacting_fibres( Fibre* pFibre ); //- currently not going to use
+
+std::vector<Fibre*> find_nearby_cells( Cell* pCell ); 
+std::vector<Fibre*> find_nearby_interacting_cells( Cell* pCell ); 
 
 };
 
