@@ -109,10 +109,16 @@ class Cell_Parameters
 
 	// necrosis parameters (may evenually be moved into a reference necrotic phenotype 
 	double max_necrosis_rate; // deprecate
-	int necrosis_type; // deprecate
-
-    double mLength=0;
+	int necrosis_type; // deprecate 
 	
+	double mLength=0;
+
+	double mVelocityAdhesion = 0;
+
+	double mVelocityContact = 0;
+
+	double mCellVelocityMaximum= 0;
+
 	Cell_Parameters(); 
 }; 
 
