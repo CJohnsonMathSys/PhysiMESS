@@ -66,6 +66,10 @@
 */
 
 #include "./custom.h"
+#include <math.h>  
+#include <chrono>
+#include <random>
+
 
 void create_cell_types( void )
 {
@@ -157,32 +161,50 @@ void setup_tissue( void )
 	
 	Cell* pC;
 	
+	std::vector<double> position = {0, 0, 0};
+
 	for( int k=0; k < cell_definitions_by_index.size() ; k++ )
 	{
 		Cell_Definition* pCD = cell_definitions_by_index[k]; 
 		std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl; 
-		for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ ) {
-            std::vector<double> position = {0, 0, 0};
+		for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ )
+		{
+			
             position[0] = Xmin + UniformRandom() * Xrange;
             position[1] = Ymin + UniformRandom() * Yrange;
             position[2] = Zmin + UniformRandom() * Zrange;
+			
+			pC = create_cell( *pCD ); 
 
-            pC = create_cell( *pCD );
+			double cell_velocity_max = 0.16666;
+			pC->parameters.mCellVelocityMaximum= cell_velocity_max;
 
-            if(pCD->name == "fibre") {
-
-                //set fibre length as normally distributed around 75
+			if(pCD->name == "fibre") {
+			
+				//set fibre length as normally distributed around 75
                 double fibreLength = NormalRandom(75.,5.);
-                pC->parameters.mLength = fibreLength/2.0;
-                //std::cout << " fibre length is " << fibreLength << std::endl;
 
-                //assign fibre orientation as a random vector from points on unit sphere.
+
+				// set parameters
+				pC->parameters.mLength = fibreLength/2.0;
+				std::cout << " fibre length is " << fibreLength << std::endl;
+
+				double vel_adhesion = 0.03;
+				double vel_contact = 0.001;
+				
+
+				pC->parameters.mVelocityAdhesion = vel_adhesion;
+				pC->parameters.mVelocityContact = vel_contact;
+				
+
+				//assign fibre orientation as a random vector from points on unit sphere.
                 pC->assign_orientation();
                 pC->state.orientation = UniformOnUnitCircle();
                 pC->state.orientation[2] = 0.0;
                 //std::cout << "fibre orientation is " << pC->state.orientation[0] << " " << pC->state.orientation[1] << " " << pC->state.orientation[2] << std::endl;
 
-                // start and end points of a fibre are calculated from fibre center
+
+				// start and end points of a fibre are calculated from fibre center
                 double xs = position[0] - pC->parameters.mLength*pC->state.orientation[0];
                 double xe = position[0] + pC->parameters.mLength*pC->state.orientation[0];
                 double ys = position[1] - pC->parameters.mLength*pC->state.orientation[1];
@@ -216,10 +238,11 @@ void setup_tissue( void )
                     zs = position[2] - 0.0;
                     ze = position[2] + 0.0;
                 }
-            }
-            pC->assign_position( position );
-            std::cout << "fibre position is " << position[0] << " " << position[1] << " " << position[2] << std::endl;
 
+			}
+			pC->assign_position( position );
+
+			std::cout << pCD->name<<" position is " << position[0] << " " << position[1] << " " << position[2] << std::endl;
 		}
 	}
 	std::cout << std::endl; 
