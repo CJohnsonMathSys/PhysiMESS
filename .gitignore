@@ -1,3 +1,5 @@
+project.exe
+*.exe
 output/initial.xml
 output/final.xml
 *.mp4
