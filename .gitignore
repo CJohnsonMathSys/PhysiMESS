@@ -9,4 +9,4 @@ project
 *.mat
 o*.xml
 *.svg
-config/*.xml
+output/*.xml
