@@ -867,92 +867,122 @@ void Cell::add_potentials(Cell* other_agent)
 	if( this == other_agent )
 	{ return; }
 
-	// 12 uniform neighbors at a close packing distance, after dividing out all constants
-	static double simple_pressure_scale = 0.027288820670331; // 12 * (1 - sqrt(pi/(2*sqrt(3))))^2 
-	// 9.820170012151277; // 12 * ( 1 - sqrt(2*pi/sqrt(3)))^2
+    if(this->type_name != "fibre" && other_agent->type_name != "fibre")
+    {
+        //std::cout << "first if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
+        // 12 uniform neighbors at a close packing distance, after dividing out all constants
+        static double simple_pressure_scale = 0.027288820670331; // 12 * (1 - sqrt(pi/(2*sqrt(3))))^2
+        // 9.820170012151277; // 12 * ( 1 - sqrt(2*pi/sqrt(3)))^2
 
-	double distance = 0; 
-	for( int i = 0 ; i < 3 ; i++ ) 
-	{ 
-		displacement[i] = position[i] - (*other_agent).position[i]; 
-		distance += displacement[i] * displacement[i]; 
-	}
-	// Make sure that the distance is not zero
-	
-	distance = std::max(sqrt(distance), 0.00001); 
-	
-	//Repulsive
-	double R = phenotype.geometry.radius+ (*other_agent).phenotype.geometry.radius; 
-	
-	double RN = phenotype.geometry.nuclear_radius + (*other_agent).phenotype.geometry.nuclear_radius;	
-	double temp_r, c;
-	if( distance > R ) 
-	{
-		temp_r=0;
-	}
-	// else if( distance < RN ) 
-	// {
-		// double M = 1.0; 
-		// c = 1.0 - RN/R; 
-		// c *= c; 
-		// c -= M; 
-		// temp_r = ( c*distance/RN  + M  ); 
-	// }
-	else
-	{
-		// temp_r = 1 - distance/R;
-		temp_r = -distance; // -d
-		temp_r /= R; // -d/R
-		temp_r += 1.0; // 1-d/R
-		temp_r *= temp_r; // (1-d/R)^2 
-		
-		// add the relative pressure contribution 
-		state.simple_pressure += ( temp_r / simple_pressure_scale ); // New July 2017 
-	}
-	
-	// August 2017 - back to the original if both have same coefficient 
-	double effective_repulsion = sqrt( phenotype.mechanics.cell_cell_repulsion_strength * other_agent->phenotype.mechanics.cell_cell_repulsion_strength ); 
-	temp_r *= effective_repulsion; 
-	
-	// temp_r *= phenotype.mechanics.cell_cell_repulsion_strength; // original 
-	//////////////////////////////////////////////////////////////////
-	
-	// Adhesive
-	//double max_interactive_distance = parameters.max_interaction_distance_factor * phenotype.geometry.radius + 
-	//	(*other_agent).parameters.max_interaction_distance_factor * (*other_agent).phenotype.geometry.radius;
-		
-	double max_interactive_distance = phenotype.mechanics.relative_maximum_adhesion_distance * phenotype.geometry.radius + 
-		(*other_agent).phenotype.mechanics.relative_maximum_adhesion_distance * (*other_agent).phenotype.geometry.radius;
-		
-	if(distance < max_interactive_distance ) 
-	{	
-		// double temp_a = 1 - distance/max_interactive_distance; 
-		double temp_a = -distance; // -d
-		temp_a /= max_interactive_distance; // -d/S
-		temp_a += 1.0; // 1 - d/S 
-		temp_a *= temp_a; // (1-d/S)^2 
-		// temp_a *= phenotype.mechanics.cell_cell_adhesion_strength; // original 
-		
-		// August 2017 - back to the original if both have same coefficient 
-		double effective_adhesion = sqrt( phenotype.mechanics.cell_cell_adhesion_strength * other_agent->phenotype.mechanics.cell_cell_adhesion_strength ); 
-		temp_a *= effective_adhesion; 
-		
-		temp_r -= temp_a;
-	}
-	/////////////////////////////////////////////////////////////////
-	if( fabs(temp_r) < 1e-16 )
-	{ return; }
-	temp_r /= distance;
-	// for( int i = 0 ; i < 3 ; i++ ) 
-	// {
-	//	velocity[i] += displacement[i] * temp_r; 
-	// }
-	axpy( &velocity , temp_r , displacement ); 
-	
-	
-	state.neighbors.push_back(other_agent); // new 1.8.0
-	
-	return;
+        double distance = 0;
+        for( int i = 0 ; i < 3 ; i++ )
+        {
+            displacement[i] = position[i] - (*other_agent).position[i];
+            distance += displacement[i] * displacement[i];
+        }
+        // Make sure that the distance is not zero
+
+        distance = std::max(sqrt(distance), 0.00001);
+
+        //Repulsive
+        double R = phenotype.geometry.radius+ (*other_agent).phenotype.geometry.radius;
+
+        double RN = phenotype.geometry.nuclear_radius + (*other_agent).phenotype.geometry.nuclear_radius;
+        double temp_r, c;
+        if( distance > R )
+        {
+            temp_r=0;
+        }
+            // else if( distance < RN )
+            // {
+            // double M = 1.0;
+            // c = 1.0 - RN/R;
+            // c *= c;
+            // c -= M;
+            // temp_r = ( c*distance/RN  + M  );
+            // }
+        else
+        {
+            // temp_r = 1 - distance/R;
+            temp_r = -distance; // -d
+            temp_r /= R; // -d/R
+            temp_r += 1.0; // 1-d/R
+            temp_r *= temp_r; // (1-d/R)^2
+
+            // add the relative pressure contribution
+            state.simple_pressure += ( temp_r / simple_pressure_scale ); // New July 2017
+        }
+
+        // August 2017 - back to the original if both have same coefficient
+        double effective_repulsion = sqrt( phenotype.mechanics.cell_cell_repulsion_strength * other_agent->phenotype.mechanics.cell_cell_repulsion_strength );
+        temp_r *= effective_repulsion;
+
+        // temp_r *= phenotype.mechanics.cell_cell_repulsion_strength; // original
+        //////////////////////////////////////////////////////////////////
+
+        // Adhesive
+        //double max_interactive_distance = parameters.max_interaction_distance_factor * phenotype.geometry.radius +
+        //	(*other_agent).parameters.max_interaction_distance_factor * (*other_agent).phenotype.geometry.radius;
+
+        double max_interactive_distance = phenotype.mechanics.relative_maximum_adhesion_distance * phenotype.geometry.radius +
+                                          (*other_agent).phenotype.mechanics.relative_maximum_adhesion_distance * (*other_agent).phenotype.geometry.radius;
+
+        if(distance < max_interactive_distance )
+        {
+            // double temp_a = 1 - distance/max_interactive_distance;
+            double temp_a = -distance; // -d
+            temp_a /= max_interactive_distance; // -d/S
+            temp_a += 1.0; // 1 - d/S
+            temp_a *= temp_a; // (1-d/S)^2
+            // temp_a *= phenotype.mechanics.cell_cell_adhesion_strength; // original
+
+            // August 2017 - back to the original if both have same coefficient
+            double effective_adhesion = sqrt( phenotype.mechanics.cell_cell_adhesion_strength * other_agent->phenotype.mechanics.cell_cell_adhesion_strength );
+            temp_a *= effective_adhesion;
+
+            temp_r -= temp_a;
+        }
+        /////////////////////////////////////////////////////////////////
+        if( fabs(temp_r) < 1e-16 )
+        { return; }
+        temp_r /= distance;
+        // for( int i = 0 ; i < 3 ; i++ )
+        // {
+        //	velocity[i] += displacement[i] * temp_r;
+        // }
+        axpy( &velocity , temp_r , displacement );
+
+
+        state.neighbors.push_back(other_agent); // new 1.8.0
+
+    }
+
+    else if(this->type_name != "fibre" && other_agent->type_name == "fibre")
+    {
+        // cell-fibre interaction - TO DO
+        //std::cout << "second if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
+        return;
+    }
+    else if(this->type_name == "fibre" && other_agent->type_name != "fibre")
+    {
+        // fibre-cell interaction - do nothing at this time
+        //std::cout << "third if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
+        return;
+    }
+    else if(this->type_name == "fibre" && other_agent->type_name == "fibre")
+    {
+        // fibre-fibre interaction - do nothing at this time
+        //std::cout << "fourth if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
+        return;
+    }
+    else
+    {
+        // one last check - do nothing but spew out some warning
+        std::cout << " WARNING: interaction between errant cell-types has been called " << std::endl;
+        return;
+    }
+
+    return;
 }
 
 Cell* create_cell( void )

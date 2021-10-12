@@ -79,9 +79,9 @@ void create_cell_types( void )
 	/* 
 	   Put any modifications to default cell definition here if you 
 	   want to have "inherited" by other cell types. 
-	   
+
 	   This is a good place to set default functions. 
-	*/ 
+	*/
 	
 	initialize_default_cell_definition(); 
 	cell_defaults.phenotype.secretion.sync_to_microenvironment( &microenvironment ); 
@@ -187,7 +187,7 @@ void setup_tissue( void )
 
 				// set parameters
 				pC->parameters.mLength = fibreLength/2.0;
-				std::cout << " fibre length is " << fibreLength << std::endl;
+				//std::cout << " fibre length is " << fibreLength << std::endl;
 
 				double vel_adhesion = 0.03;
 				double vel_contact = 0.001;
@@ -242,7 +242,7 @@ void setup_tissue( void )
 			}
 			pC->assign_position( position );
 
-			std::cout << pCD->name<<" position is " << position[0] << " " << position[1] << " " << position[2] << std::endl;
+			//std::cout << pCD->name<<" position is " << position[0] << " " << position[1] << " " << position[2] << std::endl;
 		}
 	}
 	std::cout << std::endl; 
