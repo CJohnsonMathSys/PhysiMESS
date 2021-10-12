@@ -960,9 +960,52 @@ void Cell::add_potentials(Cell* other_agent)
     else if(this->type_name != "fibre" && other_agent->type_name == "fibre")
     {
         // cell-fibre interaction - TO DO
-        //std::cout << "second if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
-        return;
+        std::cout << "second if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
+        double c_to_f[3]; // cell-to-fibre vector
+        double c_to_f_length_2; // |c_to_f| squared
+        double c_to_f_dot_v_f; // scalar product c_to_f * (f_end-f_start)
+
+        c_to_f_length_2 = 0.;
+        c_to_f_dot_v_f = 0.;
+        for (unsigned int i=0; i<3; i++) {
+            c_to_f[i] = this->position[i]-(other_agent->position[i]
+                    -0.5*other_agent->parameters.mLength*other_agent->state.orientation[i]);
+            c_to_f_length_2 = c_to_f_length_2 + c_to_f[i]*c_to_f[i];
+            c_to_f_dot_v_f = c_to_f_dot_v_f + c_to_f[i]*other_agent->parameters.mLength*other_agent->state.orientation[i];
+        }
+
+        if (c_to_f_dot_v_f < 0.)
+        {
+            // in this case the cell is closest to the fibre start point
+            std::cout << "the cell is closest to the start of the fibre" << std::endl;
+            //distnace = sqrt(c_to_f_length_2);
+
+        }
+        else if (c_to_f_dot_v_f > other_agent->parameters.mLength*other_agent->parameters.mLength)
+        {
+            // in this case the cell is closest to the fibre end point
+            std::cout << "the cell is closest to the end of the fibre" << std::endl;
+            double distance = 0.;
+            for (unsigned int i=0; i<3; i++) {
+                distance = distance +
+                           (this->position[i]-(other_agent->position[i]
+                           +0.5*other_agent->parameters.mLength*other_agent->state.orientation[i]))*
+                           (this->position[i]-(other_agent->position[i]
+                           +0.5*other_agent->parameters.mLength*other_agent->state.orientation[i]));
+            }
+            //distance = sqrt(distance);
+
+        }
+        else
+        {
+            // in this case the cell is closest to a point along the fibre
+            std::cout << "the cell is closest a point along the fibre" << std::endl;
+            double c_to_f_length_cos_alpha_2 = c_to_f_dot_v_f*c_to_f_dot_v_f/
+                                               (other_agent->parameters.mLength*other_agent->parameters.mLength);
+            //distance = sqrt( c_to_f_length_2 - c_to_f_length_cos_alpha_2);
+        }
     }
+
     else if(this->type_name == "fibre" && other_agent->type_name != "fibre")
     {
         // fibre-cell interaction - do nothing at this time
