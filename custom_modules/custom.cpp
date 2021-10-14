@@ -179,20 +179,17 @@ void setup_tissue( void )
 			double cell_velocity_max = 0.16666;
 			pC->parameters.mCellVelocityMaximum= cell_velocity_max;
 
-			if(pCD->name == "fibre") {
-			
+			if(pCD->name == "fibre")
+            {
 				//set fibre length as normally distributed around 75
                 double fibreLength = NormalRandom(75.,5.);
-
 
 				// set parameters
 				pC->parameters.mLength = fibreLength/2.0;
 				//std::cout << " fibre length is " << fibreLength << std::endl;
 
-				double vel_adhesion = 0.03;
+				double vel_adhesion = 0.3;
 				double vel_contact = 0.001;
-				
-
 				pC->parameters.mVelocityAdhesion = vel_adhesion;
 				pC->parameters.mVelocityContact = vel_contact;
 				
@@ -202,7 +199,6 @@ void setup_tissue( void )
                 pC->state.orientation = UniformOnUnitCircle();
                 pC->state.orientation[2] = 0.0;
                 //std::cout << "fibre orientation is " << pC->state.orientation[0] << " " << pC->state.orientation[1] << " " << pC->state.orientation[2] << std::endl;
-
 
 				// start and end points of a fibre are calculated from fibre center
                 double xs = position[0] - pC->parameters.mLength*pC->state.orientation[0];

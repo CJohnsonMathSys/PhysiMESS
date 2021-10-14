@@ -869,7 +869,7 @@ void Cell::add_potentials(Cell* other_agent)
 
     if(this->type_name != "fibre" && (*other_agent).type_name != "fibre")
     {
-        //std::cout << "first if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
+       //std::cout << "first if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
         // 12 uniform neighbors at a close packing distance, after dividing out all constants
         static double simple_pressure_scale = 0.027288820670331; // 12 * (1 - sqrt(pi/(2*sqrt(3))))^2
         // 9.820170012151277; // 12 * ( 1 - sqrt(2*pi/sqrt(3)))^2
@@ -952,7 +952,6 @@ void Cell::add_potentials(Cell* other_agent)
         // }
         axpy( &velocity , temp_r , displacement );
 
-
         state.neighbors.push_back(other_agent); // new 1.8.0
 
     }
@@ -1007,6 +1006,61 @@ void Cell::add_potentials(Cell* other_agent)
             std::cout << " the cell is closest to a point along the fibre" << std::endl
                     << "    the distance is " << distance << std::endl;
         }
+
+        // check distance relative to cell and fibre radius multiplied by 2
+        double R = 2*phenotype.geometry.radius+ (*other_agent).phenotype.geometry.radius;
+        std::cout << " the maximum interaction distance is " << R << std::endl;
+
+        double temp_r;
+        if( distance > R )
+        {
+            return;
+        }
+        else {
+            double cell_velocity_dot_fibre_direction = 0.;
+            for (unsigned int j = 0; j < 3; j++) {
+                cell_velocity_dot_fibre_direction += (*other_agent).state.orientation[j]
+                        * phenotype.motility.motility_vector[j];
+            }
+
+            double cell_velocity = 0;
+            for (unsigned int j = 0; j < velocity.size(); j++)
+            {
+                cell_velocity += phenotype.motility.motility_vector[j] * phenotype.motility.motility_vector[j];
+            }
+            cell_velocity = sqrt(cell_velocity);
+
+            double p_exponent = 1.;
+            double q_exponent = 1.;
+            //std::vector<double> fibre_adhesion(velocity.size(), 0.0);
+            //std::vector<double> fibre_repulsion(velocity.size(), 0.0);
+            double fibre_adhesion=0;
+            double fibre_repulsion=0;
+            //for (unsigned int j = 0; j < velocity.size(); j++) {
+                double xi = fabs(cell_velocity_dot_fibre_direction) / (cell_velocity + 1e-8);
+                double xip = pow(xi,p_exponent);
+                double xiq = pow((1 - xi * xi),q_exponent);
+
+                // fibre_adhesion
+                /*fibre_adhesion[j] += (*other_agent).parameters.mVelocityAdhesion * xip *
+                                     (1 - cell_velocity / this->parameters.mCellVelocityMaximum) *
+                                     (*other_agent).state.orientation[j];*/
+                fibre_adhesion = (*other_agent).parameters.mVelocityAdhesion * xip *
+                                     (1 - cell_velocity / this->parameters.mCellVelocityMaximum);
+                // fibre_repulsion
+                /*fibre_repulsion[j] += -(*other_agent).parameters.mVelocityContact * xiq *
+                                        phenotype.motility.motility_vector[j];*/
+                fibre_repulsion = -(*other_agent).parameters.mVelocityContact * xiq;
+
+            //}
+            std::cout << "fibre adhesion is " << fibre_adhesion << std::endl;
+            std::cout << "fibre repulsion is " << fibre_adhesion << std::endl;
+
+        axpy(&velocity, fibre_adhesion, (*other_agent).state.orientation);
+        axpy(&velocity, fibre_repulsion, phenotype.motility.motility_vector);
+        
+        }
+
     }
 
     else if(this->type_name == "fibre" && (*other_agent).type_name != "fibre")
