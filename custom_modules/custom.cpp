@@ -193,7 +193,7 @@ void setup_tissue( void )
 			(*all_cells)[i]->assign_orientation();
 			(*all_cells)[i]->state.orientation = UniformOnUnitCircle();
             (*all_cells)[i]->state.orientation[2] = 0.0;
-			std::cout << "fibre orientation is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << " " << (*all_cells)[i]->state.orientation[2] << std::endl;
+			std::cout << " fibre orientation is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << " " << (*all_cells)[i]->state.orientation[2] << std::endl;
 
 			// start and end points of a fibre are calculated from fibre center
 			double xs = (*all_cells)[i]->position[0] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
@@ -202,7 +202,7 @@ void setup_tissue( void )
 			double ye = (*all_cells)[i]->position[1] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
 			double zs = (*all_cells)[i]->position[2] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[2];
 			double ze = (*all_cells)[i]->position[2] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[2];
-			std::cout << "fibre endpoints are " << xs << " " << ys << " -> " << xe << " " << ye << std::endl;
+			std::cout << " fibre endpoints are " << xs << " " << ys << " " << zs << " and " << xe << " " << ye << " " << ze << std::endl;
 
 			// check whether a fibre end point leaves the domain and if so initialise fibre again
 			// assume user placed the fibre within the domain so reinitialise orientation, break after 10 failures
@@ -399,7 +399,7 @@ void setup_tissue( void )
 		}
 	}
 
-	bool isAddFibres = false; // disable the manual input in favour of csv
+	bool isAddFibres = true; // disable the manual input in favour of csv
 	if(isAddFibres && !isFibreFromFile)
 	{
 		// fibres have not been added from the file but do want fibres

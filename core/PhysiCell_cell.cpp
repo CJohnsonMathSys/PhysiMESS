@@ -974,15 +974,13 @@ void Cell::add_potentials(Cell* other_agent)
             fibre_to_cell_length_squared += fibre_to_cell[i]*fibre_to_cell[i];
             fibre_to_cell_dot_fibre_vector += fibre_to_cell[i]*fibre_length*(*other_agent).state.orientation[i];
         }
-        std::cout << " fibre_to_cell is " << fibre_to_cell[0] << " " << fibre_to_cell[1] << " " << fibre_to_cell[2] << std::endl;
-        std::cout << " fibre_to_cell_dot_fibre_vector is " << fibre_to_cell_dot_fibre_vector << std::endl;
 
         if (fibre_to_cell_dot_fibre_vector < 0.)
         {
             // as per PhysiCell we ensure the distance is not set to 0
             distance = std::max(sqrt(fibre_to_cell_length_squared), 0.00001);
-            std::cout << " the cell is closest to the start of the fibre" << std::endl
-                    << "    the distance is " << distance << std::endl;
+            std::cout << " the cell is closest to the start of the fibre"
+                    << " - the distance is " << distance << std::endl;
 
         }
         else if (fibre_to_cell_dot_fibre_vector > fibre_length*fibre_length)
@@ -996,8 +994,8 @@ void Cell::add_potentials(Cell* other_agent)
             }
             // as per PhysiCell we ensure the distance is not set to 0
             distance = std::max(sqrt(displacement), 0.00001);
-            std::cout << " the cell is closest to the end of the fibre" << std::endl
-                    << "    the distance is " << distance << std::endl;
+            std::cout << " the cell is closest to the end of the fibre"
+                    << " - the distance is " << distance << std::endl;
 
         }
         else
@@ -1006,20 +1004,22 @@ void Cell::add_potentials(Cell* other_agent)
                                                (fibre_length*fibre_length);
             // as per PhysiCell we ensure the distance is not set to 0
             distance = std::max(sqrt(fibre_to_cell_length_squared - fibre_to_cell_length_cos_alpha_squared), 0.00001);
-            std::cout << " the cell is closest to a point along the fibre" << std::endl
-                    << "    the distance is " << distance << std::endl;
+            std::cout << " the cell is closest to a point along the fibre"
+                    << " - the distance is " << distance << std::endl;
         }
 
         // check distance relative to cell and fibre radius multiplied by 2
         double R = 2*phenotype.geometry.radius+ (*other_agent).phenotype.geometry.radius;
-        std::cout << " the maximum interaction distance is " << R << std::endl;
+        std::cout << " the maximum interaction distance is " << R;
 
         double temp_r;
         if( distance > R )
         {
-            return;
+            std::cout << " so " << this->type_name << " does not interact " << (*other_agent).type_name << std::endl;
+            //return;
         }
         else {
+            std::cout << " so " << this->type_name << " interacts " << (*other_agent).type_name << std::endl;
             double cell_velocity_dot_fibre_direction = 0.;
             for (unsigned int j = 0; j < 3; j++) {
                 cell_velocity_dot_fibre_direction += (*other_agent).state.orientation[j]
@@ -1056,8 +1056,8 @@ void Cell::add_potentials(Cell* other_agent)
                 fibre_repulsion = -(*other_agent).parameters.mVelocityContact * xiq;
 
             //}
-            std::cout << "fibre adhesion is " << fibre_adhesion << std::endl;
-            std::cout << "fibre repulsion is " << fibre_adhesion << std::endl;
+            std::cout << "   fibre adhesion is " << fibre_adhesion << std::endl;
+            std::cout << "   fibre repulsion is " << fibre_adhesion << std::endl;
 
         axpy(&velocity, fibre_adhesion, (*other_agent).state.orientation);
         axpy(&velocity, fibre_repulsion, phenotype.motility.motility_vector);
