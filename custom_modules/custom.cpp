@@ -184,8 +184,8 @@ void setup_tissue( void )
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
 			std::cout << " fibre length is " << fibreLength << std::endl;
 
-			double vel_adhesion = 0.3;
-			double vel_contact = 0.001;
+            double vel_adhesion = 0.4; //0.3;
+            double vel_contact = 1.0; //0.001;
 			(*all_cells)[i]->parameters.mVelocityAdhesion = vel_adhesion;
 			(*all_cells)[i]->parameters.mVelocityContact = vel_contact;
 
@@ -258,8 +258,8 @@ void setup_tissue( void )
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
 			//std::cout << " fibre length is " << fibreLength << std::endl;
 
-			double vel_adhesion = 0.3;
-			double vel_contact = 0.001;
+            double vel_adhesion = 0.4; //0.3;
+            double vel_contact = 1.0; //0.001;
 			(*all_cells)[i]->parameters.mVelocityAdhesion = vel_adhesion;
 			(*all_cells)[i]->parameters.mVelocityContact = vel_contact;
 			
@@ -333,8 +333,8 @@ void setup_tissue( void )
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
 			//std::cout << " fibre length is " << fibreLength << std::endl;
 
-			double vel_adhesion = 0.3;
-			double vel_contact = 0.001;
+            double vel_adhesion = 0.4; //0.3;
+            double vel_contact = 1.0; //0.001;
 			(*all_cells)[i]->parameters.mVelocityAdhesion = vel_adhesion;
 			(*all_cells)[i]->parameters.mVelocityContact = vel_contact;
 			
@@ -433,8 +433,8 @@ void setup_tissue( void )
 					pC->parameters.mLength = fibreLength/2.0;
 					//std::cout << " fibre length is " << fibreLength << std::endl;
 
-					double vel_adhesion = 0.3;
-					double vel_contact = 0.001;
+                    double vel_adhesion = 0.4; //0.3;
+                    double vel_contact = 1.0; //0.001;
 					pC->parameters.mVelocityAdhesion = vel_adhesion;
 					pC->parameters.mVelocityContact = vel_contact;
 					

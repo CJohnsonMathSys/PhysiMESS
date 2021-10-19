@@ -1015,11 +1015,11 @@ void Cell::add_potentials(Cell* other_agent)
         double temp_r;
         if( distance > R )
         {
-            std::cout << " so " << this->type_name << " does not interact " << (*other_agent).type_name << std::endl;
+            std::cout << " so " << this->type_name << " does not interact with " << (*other_agent).type_name << std::endl;
             //return;
         }
         else {
-            std::cout << " so " << this->type_name << " interacts " << (*other_agent).type_name << std::endl;
+            std::cout << " so " << this->type_name << " interacts with " << (*other_agent).type_name << std::endl;
             double cell_velocity_dot_fibre_direction = 0.;
             for (unsigned int j = 0; j < 3; j++) {
                 cell_velocity_dot_fibre_direction += (*other_agent).state.orientation[j]

@@ -708,10 +708,18 @@ void create_plot_legend( std::string filename , std::vector<std::string> (*cell_
 
 	// place a rod if it's a fibre
 	if(pCell->type_name == "fibre")
-        {
+    {
         //Write_SVG_fibre(os, cursor_x, cursor_y , 0.5*temp_cell_radius , 1.0 , colors[1] , colors[0] );
-	Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[1] );
-	}
+        Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[1] );
+    }
+    else if(pCell->type_name == "fibre_vertical")
+    {
+        Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[0] );
+    }
+    else if(pCell->type_name == "fibre_horizontal")
+    {
+        Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[0] );
+    }
 	else
 	{
         // place a big circle with cytoplasm colors
