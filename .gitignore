@@ -1,0 +1,12 @@
+project.exe
+*.exe
+output/initial.xml
+output/final.xml
+*.mp4
+*.jpg
+*.o
+project
+*.mat
+o*.xml
+*.svg
+output/*.xml

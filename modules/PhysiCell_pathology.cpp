@@ -515,8 +515,11 @@ void SVG_plot( std::string filename , Microenvironment& M, double z_slice , doub
            // then fibre, plot line
 
             //Write_SVG_fibre( os, (pC->position)[0]-X_lower, (pC->position)[1]-Y_lower, plot_radius , 0.5, Colors[1], Colors[0] );
-            Write_SVG_line( os, (pC->position)[0]-(pC->parameters.mLength)*(pC->state.orientation)[0]-X_lower, (pC->position)[1]-(pC->parameters.mLength)*(pC->state.orientation)[1]-Y_lower, (pC->position)[0]+(pC->parameters.mLength)*(pC->state.orientation)[0]-X_lower, (pC->position)[1]+(pC->parameters.mLength)*(pC->state.orientation)[1]-Y_lower, 2.0, Colors[0]);
-            //Write_SVG_line( os, (pC->position)[0]-(pC->parameters.mLength)-X_lower, (pC->position)[1]-(pC->parameters.mLength)-Y_lower, (pC->position)[0]+(pC->parameters.mLength)-X_lower, (pC->position)[1]+(pC->parameters.mLength)-Y_lower, 2.0, Colors[0]);
+            Write_SVG_line( os, (pC->position)[0]-(pC->parameters.mLength)*(pC->state.orientation)[0]-X_lower,
+                                   (pC->position)[1]-(pC->parameters.mLength)*(pC->state.orientation)[1]-Y_lower,
+                                    (pC->position)[0]+(pC->parameters.mLength)*(pC->state.orientation)[0]-X_lower,
+                                    (pC->position)[1]+(pC->parameters.mLength)*(pC->state.orientation)[1]-Y_lower,
+                                    2.0, Colors[0]);
 
         }
         else{
@@ -705,10 +708,18 @@ void create_plot_legend( std::string filename , std::vector<std::string> (*cell_
 
 	// place a rod if it's a fibre
 	if(pCell->type_name == "fibre")
-        {
+    {
         //Write_SVG_fibre(os, cursor_x, cursor_y , 0.5*temp_cell_radius , 1.0 , colors[1] , colors[0] );
-	Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[1] );
-	}
+        Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[1] );
+    }
+    else if(pCell->type_name == "fibre_vertical")
+    {
+        Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[0] );
+    }
+    else if(pCell->type_name == "fibre_horizontal")
+    {
+        Write_SVG_line(os, cursor_x, cursor_y-20.0 , cursor_x , cursor_y+20.0 , 2.0 , colors[0] );
+    }
 	else
 	{
         // place a big circle with cytoplasm colors
