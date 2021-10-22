@@ -184,8 +184,8 @@ void setup_tissue( void )
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
 			std::cout << " fibre length is " << fibreLength << std::endl;
 
-            double vel_adhesion = 0.4; //0.3;
-            double vel_contact = 1.0; //0.001;
+            double vel_adhesion = 0.3; //0.3;
+            double vel_contact = 0.01; //0.001;
 			(*all_cells)[i]->parameters.mVelocityAdhesion = vel_adhesion;
 			(*all_cells)[i]->parameters.mVelocityContact = vel_contact;
 
@@ -258,8 +258,8 @@ void setup_tissue( void )
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
 			//std::cout << " fibre length is " << fibreLength << std::endl;
 
-            double vel_adhesion = 0.4; //0.3;
-            double vel_contact = 1.0; //0.001;
+            double vel_adhesion = 0.3; //0.3;
+            double vel_contact = 0.01; //0.001;
 			(*all_cells)[i]->parameters.mVelocityAdhesion = vel_adhesion;
 			(*all_cells)[i]->parameters.mVelocityContact = vel_contact;
 			
@@ -331,10 +331,10 @@ void setup_tissue( void )
 
 			// set parameters
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
-			//std::cout << " fibre length is " << fibreLength << std::endl;
+			std::cout << " fibre length is " << fibreLength << std::endl;
 
-            double vel_adhesion = 0.4; //0.3;
-            double vel_contact = 1.0; //0.001;
+            double vel_adhesion = 0.3; //0.3;
+            double vel_contact = 0.01; //0.001;
 			(*all_cells)[i]->parameters.mVelocityAdhesion = vel_adhesion;
 			(*all_cells)[i]->parameters.mVelocityContact = vel_contact;
 			
@@ -345,7 +345,7 @@ void setup_tissue( void )
 			(*all_cells)[i]->state.orientation[1] = 0.0;
 			(*all_cells)[i]->state.orientation[2] = 0.0;
 
-			//std::cout << "fibre orientation is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << " " << (*all_cells)[i]->state.orientation[2] << std::endl;
+			std::cout << "fibre orientation is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << " " << (*all_cells)[i]->state.orientation[2] << std::endl;
 
 			// start and end points of a fibre are calculated from fibre center
 			double xs = (*all_cells)[i]->position[0] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
@@ -354,7 +354,7 @@ void setup_tissue( void )
 			double ye = (*all_cells)[i]->position[1] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
 			double zs = (*all_cells)[i]->position[2] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[2];
 			double ze = (*all_cells)[i]->position[2] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[2];
-			//std::cout << "fibre endpoints are " << xs << " " << ys << " -> " << xe << " " << ye << std::endl;
+			std::cout << "fibre endpoints are " << xs << " " << ys << " -> " << xe << " " << ye << std::endl;
 
 			// check whether a fibre end point leaves the domain and if so initialise fibre again
 			// assume user placed the fibre within the domain so reinitialise orientation, break after 10 failures
@@ -433,8 +433,8 @@ void setup_tissue( void )
 					pC->parameters.mLength = fibreLength/2.0;
 					//std::cout << " fibre length is " << fibreLength << std::endl;
 
-                    double vel_adhesion = 0.4; //0.3;
-                    double vel_contact = 1.0; //0.001;
+                    double vel_adhesion = 0.3; //0.3;
+                    double vel_contact = 0.01; //0.001;
 					pC->parameters.mVelocityAdhesion = vel_adhesion;
 					pC->parameters.mVelocityContact = vel_contact;
 					
