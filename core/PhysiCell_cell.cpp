@@ -861,6 +861,14 @@ void Cell::copy_function_pointers(Cell* copy_me)
 	return; 
 }
 
+void Cell::CrossProduct(std::vector<double> vector_A, std::vector<double> vector_B, std::vector<double> C_P)
+{
+    C_P[0] = vector_A[1] * vector_B[2] - vector_A[2] * vector_B[1];
+    C_P[1] = -(vector_A[0] * vector_B[2] - vector_A[2] * vector_B[0]);
+    C_P[2] = vector_A[0] * vector_B[1] - vector_A[1] * vector_B[0];
+    return;
+}
+
 void Cell::add_potentials(Cell* other_agent)
 {
 	// if( this->ID == other_agent->ID )
@@ -983,9 +991,10 @@ void Cell::add_potentials(Cell* other_agent)
             //distance = std::max(sqrt(fibre_to_cell_length_squared), 0.00001);
             // as per PhysiCell we ensure the distance is not set to 0
             distance = std::max(sqrt(distance), 0.00001);
-            std::cout << " the cell is closest to the start of the fibre"
+            /*std::cout << " the cell is closest to the start of the fibre"
                     << " - the distance is " << distance << std::endl;
             std::cout << " displacement vector is " << displacement[0] << " " << displacement[1] << " " <<displacement[2] << std::endl;
+             */
         }
         else if (fibre_to_cell_dot_fibre_vector > fibre_length*fibre_length)
         {
@@ -998,9 +1007,10 @@ void Cell::add_potentials(Cell* other_agent)
             }
             // as per PhysiCell we ensure the distance is not set to 0
             distance = std::max(sqrt(distance), 0.00001);
-            std::cout << " the cell is closest to the end of the fibre"
+            /*std::cout << " the cell is closest to the end of the fibre"
                     << " - the distance is " << distance << std::endl;
             std::cout << " displacement vector is " << displacement[0] << " " << displacement[1] << " " <<displacement[2] << std::endl;
+             */
 
         }
         else
@@ -1014,9 +1024,10 @@ void Cell::add_potentials(Cell* other_agent)
             }
             // as per PhysiCell we ensure the distance is not set to 0
             distance = std::max(sqrt(distance), 0.00001);
-            std::cout << " the cell is closest to a point along the fibre"
+            /*std::cout << " the cell is closest to a point along the fibre"
                     << " - the distance is " << distance << std::endl;
             std::cout << " displacement vector is " << displacement[0] << " " << displacement[1] << " " <<displacement[2] << std::endl;
+             */
         }
 
         // as per PhysiCell
@@ -1099,11 +1110,153 @@ void Cell::add_potentials(Cell* other_agent)
         //std::cout << "third if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
         return;
     }
-    else if(this->type_name == "fibre" && (*other_agent).type_name == "fibre")
-    {
-        // fibre-fibre interaction - do nothing at this time
+
+    else if(this->type_name == "fibre" && (*other_agent).type_name == "fibre") {
+        // fibre-fibre interaction
         //std::cout << "fourth if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
-        return;
+
+        //determine whether fibres cross-link
+        /* will need to optimise this more when we have lots of fibres e.g.
+           may want to check only fibres within a given radius
+        */
+        std::vector<double> point1(3, 0.0);
+        std::vector<double> point2(3, 0.0);
+        std::vector<double> point3(3, 0.0);
+        std::vector<double> point4(3, 0.0);
+        for (int i = 0; i < 3; i++) {
+            point1[i] = this->position[i] - this->parameters.mLength * this->state.orientation[i];
+            point2[i] = this->position[i] + this->parameters.mLength * this->state.orientation[i];
+            point3[i] = (*other_agent).position[i] - this->parameters.mLength * (*other_agent).state.orientation[i];
+            point4[i] = (*other_agent).position[i] + this->parameters.mLength * (*other_agent).state.orientation[i];
+        }
+        /*
+        std::cout << "fibre1 start is " << point1[0] << " " << point1[1] << " " << point1[2] << std::endl;
+        std::cout << "fibre1 end is " << point2[0] << " " << point2[1] << " " << point2[2] << std::endl;
+        std::cout << "fibre2 start is " << point3[0] << " " << point3[1] << " " << point3[2] << std::endl;
+        std::cout << "fibre2 end is " << point4[0] << " " << point4[1] << " " << point4[2] << std::endl;
+        */
+
+        //CASE 1 FIBRES FORM TRUE CROSS
+        // determine all relevant additional vectors:
+        std::vector<double> point1_to_point3(3, 0.0);
+        std::vector<double> point1_to_point4(3, 0.0);
+        std::vector<double> point3_to_point2(3, 0.0);
+        std::vector<double> point3_to_point1(3, 0.0);
+        for (int i = 0; i < 3; i++) {
+            point1_to_point3[i] = point3[i] - point1[i];
+            point1_to_point4[i] = point4[i] - point1[i];
+            point3_to_point2[i] = point2[i] - point3[i];
+            point3_to_point1[i] = - point1_to_point3[i];
+        }
+        /*
+        std::cout << " vector point1_to_point3 is " << point1_to_point3[0] << " " << point1_to_point3[1] << " " << point1_to_point3[2] << std::endl;
+        std::cout << " vector point1_to_point4 is " << point1_to_point4[0] << " " << point1_to_point4[1] << " " << point1_to_point4[2] << std::endl;
+        std::cout << " vector point3_to_point2 is " << point3_to_point2[0] << " " << point3_to_point2[1] << " " << point3_to_point2[2] << std::endl;
+         */
+
+        // calculate the cross products:
+        std::vector<double> CP1(3, 0.0);
+        std::vector<double> CP2(3, 0.0);
+        std::vector<double> CP3(3, 0.0);
+        std::vector<double> CP4(3, 0.0);
+        CrossProduct(point1_to_point3, this->state.orientation, CP1);
+        CrossProduct(point1_to_point4, this->state.orientation, CP2);
+        CrossProduct(point3_to_point1, (*other_agent).state.orientation, CP3);
+        CrossProduct(point3_to_point2, (*other_agent).state.orientation, CP4);
+        /*CP1[0] = point1_to_point3[1] * this->state.orientation[2] - point1_to_point3[2] * this->state.orientation[1];
+        CP1[1] = -(point1_to_point3[0] * this->state.orientation[2] - point1_to_point3[2] * this->state.orientation[0]);
+        CP1[2] = point1_to_point3[0] * this->state.orientation[1] - point1_to_point3[1] * this->state.orientation[0];
+        CP3[0] = point3_to_point1[1] * (*other_agent).state.orientation[2] -
+                 point3_to_point1[2] * (*other_agent).state.orientation[1];
+        CP3[1] = -(point3_to_point1[0] * (*other_agent).state.orientation[2] -
+                   point3_to_point1[2] * (*other_agent).state.orientation[0]);
+        CP3[2] = point3_to_point1[0] * (*other_agent).state.orientation[1] -
+                 point3_to_point1[1] * (*other_agent).state.orientation[0];
+        CP2[0] = point1_to_point4[1] * this->state.orientation[2] - point1_to_point4[2] * this->state.orientation[1];
+        CP2[1] = -(point1_to_point4[0] * this->state.orientation[2] - point1_to_point4[2] * this->state.orientation[0]);
+        CP2[2] = point1_to_point4[0] * this->state.orientation[1] - point1_to_point4[1] * this->state.orientation[0];
+        CP4[0] = point3_to_point2[1] * (*other_agent).state.orientation[2] -
+                 point3_to_point2[2] * (*other_agent).state.orientation[1];
+        CP4[1] = -(point3_to_point2[0] * (*other_agent).state.orientation[2] -
+                   point3_to_point2[2] * (*other_agent).state.orientation[0]);
+        CP4[2] = point3_to_point2[0] * (*other_agent).state.orientation[1] -
+                 point3_to_point2[1] * (*other_agent).state.orientation[0];*/
+
+        std::cout << " cross product vector is " << CP1[0] << " " << CP1[1] << " " << CP1[2] << std::endl;
+        std::cout << " cross product vector is " << CP2[0] << " " << CP2[1] << " " << CP2[2] << std::endl;
+        std::cout << " cross product vector is " << CP3[0] << " " << CP3[1] << " " << CP3[2] << std::endl;
+        std::cout << " cross product vector is " << CP4[0] << " " << CP4[1] << " " << CP4[2] << std::endl;
+
+
+        double DP1 = 0.0;
+        double DP2 = 0.0;
+        for (int i = 0; i < 3; i++) {
+            DP1 += CP1[i] * CP2[i];
+            DP2 += CP3[i] * CP4[i];
+        }
+
+        //std::cout << " dot product vector is " << DP1 << std::endl;
+        //std::cout << " dot product vector is " << DP2 << std::endl;
+        if (DP1 < 0 & DP2 < 0) {
+            //std::cout << "fibres cross-link in X shape" << std::endl;
+            //this->parameters.crosslink_count++;
+            this->parameters.crosslink_count++;
+        }
+
+        //CASE 2 FIBRES CONNECT AT ONE FIBRE ENDPOINT
+        double DCP1 = 0.0;
+        double DCP2 = 0.0;
+        double DCP3 = 0.0;
+        double DCP4 = 0.0;
+        for (int i = 0; i < 3; i++) {
+            DCP1 += CP1[i] * CP1[i];
+            DCP2 += CP2[i] * CP2[i];
+            DCP3 += CP3[i] * CP3[i];
+            DCP4 += CP4[i] * CP4[i];
+        }
+
+        std::vector<double> fibre1_min_point(3, 0.0);
+        std::vector<double> fibre1_max_point(3, 0.0);
+        std::vector<double> fibre2_min_point(3, 0.0);
+        std::vector<double> fibre2_max_point(3, 0.0);
+        for (int i = 0; i < 3; i++)
+        {
+            fibre1_min_point[i] = std::min(point1[i], point2[i]);
+            fibre1_max_point[i] = std::max(point1[i], point2[i]);
+            fibre2_min_point[i] = std::min(point3[i], point4[i]);
+            fibre2_max_point[i] = std::max(point3[i], point4[i]);
+        }
+
+        if (DCP1 == 0 && fibre1_min_point[0] <= point3[0] && point3[0] <= fibre1_max_point[0] && fibre1_min_point[1] <= point3[1] && point3[1] <= fibre1_max_point[1] && fibre1_min_point[2] <= point3[2] && point3[2] <= fibre1_max_point[2])
+        {
+            //std::cout << " DCP1 is zero" << std::endl;
+            //std::cout << " fibres cross-link in T shape" << std::endl;
+            this->parameters.crosslink_count++;
+        }
+
+        if (DCP2 == 0 && fibre1_min_point[0] <= point4[0] && point4[0] <= fibre1_max_point[0] && fibre1_min_point[1] <= point4[1] && point4[1] <= fibre1_max_point[1] && fibre1_min_point[2] <= point4[2] && point4[2] <= fibre1_max_point[2])
+        {
+            //std::cout << " DCP2 is zero" << std::endl;
+            //std::cout << "fibres cross-link in T shape" << std::endl;
+            this->parameters.crosslink_count++;
+        }
+
+        if (DCP3 == 0 && fibre2_min_point[0] <= point1[0] && point1[0] <= fibre2_max_point[0] && fibre2_min_point[1] <= point1[1] && point1[1] <= fibre2_max_point[1] && fibre2_min_point[2] <= point1[2] && point1[2] <= fibre2_max_point[2])
+        {
+            //std::cout << " DCP3 is zero" << std::endl;
+            //std::cout << "fibres cross-link in T shape" << std::endl;
+            this->parameters.crosslink_count++;
+        }
+
+        if (DCP4 == 0 && fibre2_min_point[0] <= point2[0] && point2[0] <= fibre2_max_point[0] && fibre2_min_point[1] <= point2[1] && point2[1] <= fibre2_max_point[1] && fibre2_min_point[2] <= point2[2] && point2[2] <= fibre2_max_point[2])
+        {
+            //std::cout << " DCP4 is zero" << std::endl;
+            //std::cout << "fibres cross-link in T shape" << std::endl;
+            this->parameters.crosslink_count++;
+        }
+
+        //std::cout << " the cross-link count for cell " << this->ID <<  " is " << this->parameters.crosslink_count << std::endl;
+        //return;
     }
     else
     {

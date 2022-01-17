@@ -113,6 +113,8 @@ class Cell_Parameters
 	
 	double mLength=0;
 
+    int crosslink_count=0;
+
 	double mVelocityAdhesion = 0;
 
 	double mVelocityContact = 0;
@@ -152,9 +154,9 @@ class Cell_State
 	std::vector<Cell*> neighbors; // not currently tracked! 
 	std::vector<double> orientation;
 	
-	double simple_pressure; 
+	double simple_pressure;
 	
-	int number_of_attached_cells( void ); 
+	int number_of_attached_cells( void );
 	
 	Cell_State(); 
 };
@@ -221,6 +223,8 @@ class Cell : public Basic_Agent
 								// otherwise, it assigns a random orientation to the cell.
 	
 	void copy_function_pointers(Cell*);
+
+    void CrossProduct(std::vector<double> vector_A, std::vector<double> vector_B, std::vector<double> C_P);
 	
 	void update_voxel_in_container(void);
 	void copy_data(Cell *);

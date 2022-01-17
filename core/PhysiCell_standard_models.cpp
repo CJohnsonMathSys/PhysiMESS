@@ -574,9 +574,9 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 		pCell->functions.add_cell_basement_membrane_interactions(pCell, phenotype,dt);
 	}
 	
-	pCell->state.simple_pressure = 0.0; 
+	pCell->state.simple_pressure = 0.0;
 	pCell->state.neighbors.clear(); // new 1.8.0
-	
+
 	//First check the neighbors in my current voxel
 	std::vector<Cell*>::iterator neighbor;
 	std::vector<Cell*>::iterator end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
@@ -601,6 +601,11 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 			pCell->add_potentials(*neighbor);
 		}
 	}
+
+    if (pCell->type_name == "fibre")
+    {
+        std::cout << " the cross-link count for fibre " << pCell->ID <<  " is " << pCell->parameters.crosslink_count << std::endl;
+    }
 
 	pCell->update_motility_vector(dt); 
 	pCell->velocity += phenotype.motility.motility_vector;

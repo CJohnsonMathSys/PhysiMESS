@@ -177,8 +177,8 @@ void setup_tissue( void )
 			// concerned with a fibre, position provided in CSV, test whether out of bounds
 	
 			//set fibre length as normally distributed around 75
-			double fibreLength = NormalRandom(75.,5.);
-            //double fibreLength = 40;
+			//double fibreLength = NormalRandom(75.,5.);
+            double fibreLength = 40;
 
 			// set parameters
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
@@ -252,7 +252,8 @@ void setup_tissue( void )
 			bool isFibreOutOfBounds = false;
 
 			//set fibre length as normally distributed around 75
-			double fibreLength = NormalRandom(75.,5.);
+			//double fibreLength = NormalRandom(75.,5.);
+			double fibreLength = 40;
 
 			// set parameters
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
@@ -327,11 +328,12 @@ void setup_tissue( void )
 			bool isFibreOutOfBounds = false;
 
 			//set fibre length as normally distributed around 75
-			double fibreLength = NormalRandom(75.,5.);
+			//double fibreLength = NormalRandom(75.,5.);
+			double fibreLength = 40;
 
 			// set parameters
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
-			std::cout << " fibre length is " << fibreLength << std::endl;
+			//std::cout << " fibre length is " << fibreLength << std::endl;
 
             double vel_adhesion = 0.3; //0.3;
             double vel_contact = 0.01; //0.001;
@@ -345,7 +347,7 @@ void setup_tissue( void )
 			(*all_cells)[i]->state.orientation[1] = 0.0;
 			(*all_cells)[i]->state.orientation[2] = 0.0;
 
-			std::cout << "fibre orientation is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << " " << (*all_cells)[i]->state.orientation[2] << std::endl;
+			//std::cout << "fibre orientation is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << " " << (*all_cells)[i]->state.orientation[2] << std::endl;
 
 			// start and end points of a fibre are calculated from fibre center
 			double xs = (*all_cells)[i]->position[0] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
@@ -354,11 +356,11 @@ void setup_tissue( void )
 			double ye = (*all_cells)[i]->position[1] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
 			double zs = (*all_cells)[i]->position[2] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[2];
 			double ze = (*all_cells)[i]->position[2] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[2];
-			std::cout << "fibre endpoints are " << xs << " " << ys << " -> " << xe << " " << ye << std::endl;
+			//std::cout << "fibre endpoints are " << xs << " " << ys << " -> " << xe << " " << ye << std::endl;
 
 			// check whether a fibre end point leaves the domain and if so initialise fibre again
 			// assume user placed the fibre within the domain so reinitialise orientation, break after 10 failures
-			while (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax || fail_count<10) {
+			while ((xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax) && fail_count<10) {
 				//std::cout << "fibre position is " << xs-Xmin << " " << xe-Xmin << " " << std::endl;
 				std::cout << "!!! Horizontal x The fibre has a portion outside of the domain - trying again !!!" << std::endl;
 				std::cout<<fail_count<<std::endl;
@@ -366,7 +368,7 @@ void setup_tissue( void )
 				fail_count=11;
 			}
 			fail_count=0;
-			while (ys < Ymin || ye > Ymax || ye < Xmin || ys > Xmax || fail_count<10) {
+			while ((ys < Ymin || ye > Ymax || ye < Xmin || ys > Xmax) && fail_count<10) {
 				//std::cout << "fibre position is " << ys-Ymin << " " << ye-Ymin << " " << std::endl;
 				std::cout << "!!! Horizontal y The fibre has a portion outside of the domain - trying again !!!" << std::endl;
 				std::cout<<fail_count<<std::endl;
