@@ -113,7 +113,8 @@ class Cell_Parameters
 	
 	double mLength=0;
 
-    int crosslink_count=0;
+    int X_crosslink_count=0;
+    int T_crosslink_count=0;
 
 	double mVelocityAdhesion = 0;
 
@@ -224,8 +225,8 @@ class Cell : public Basic_Agent
 	
 	void copy_function_pointers(Cell*);
 
-    void CrossProduct(std::vector<double> vector_A, std::vector<double> vector_B, std::vector<double> C_P);
-	
+    void CrossProduct(std::vector<double> vector_A, std::vector<double> vector_B, int C_P[]);
+
 	void update_voxel_in_container(void);
 	void copy_data(Cell *);
 	
