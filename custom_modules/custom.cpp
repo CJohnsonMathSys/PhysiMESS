@@ -181,7 +181,7 @@ void setup_tissue( void ){
 
 			// set parameters
 			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
-			std::cout << " fibre length is " << fibreLength << std::endl;
+			//std::cout << " fibre length is " << fibreLength << std::endl;
 
 			(*all_cells)[i]->parameters.mVelocityAdhesion = vel_adhesion;
 			(*all_cells)[i]->parameters.mVelocityContact = vel_contact;
@@ -191,11 +191,11 @@ void setup_tissue( void ){
             if( default_microenvironment_options.simulate_2D == true ) {
                 (*all_cells)[i]->state.orientation = UniformOnUnitCircle();
                 (*all_cells)[i]->state.orientation[2] = 0.0;
-                std::cout << " fibre orientation in 2D is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << std::endl;
+                //std::cout << " fibre orientation in 2D is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << std::endl;
             }
             else{
                 (*all_cells)[i]->state.orientation = UniformOnUnitSphere();
-                std::cout << " fibre orientation in 3D is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << " " << (*all_cells)[i]->state.orientation[2] << std::endl;
+                //std::cout << " fibre orientation in 3D is " << (*all_cells)[i]->state.orientation[0] << " " << (*all_cells)[i]->state.orientation[1] << " " << (*all_cells)[i]->state.orientation[2] << std::endl;
             }
 
 			// start and end points of a fibre are calculated from fibre center
@@ -206,14 +206,14 @@ void setup_tissue( void ){
             double zs = 0.0;
             double ze = 0.0;
             if( default_microenvironment_options.simulate_2D == true ) {
-                std::cout << " fibre endpoints in 2D are " << xs << " " << ys << " and " << xe << " " << ye << std::endl;
+                //std::cout << " fibre endpoints in 2D are " << xs << " " << ys << " and " << xe << " " << ye << std::endl;
             }
             else if( default_microenvironment_options.simulate_2D == false ) {
                 zs = (*all_cells)[i]->position[2] -
                             (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
                 ze = (*all_cells)[i]->position[2] +
                             (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
-                std::cout << " fibre endpoints in 3D are " << xs << " " << ys << " " << zs << " and " << xe << " " << ye << " " << ze << std::endl;
+                //std::cout << " fibre endpoints in 3D are " << xs << " " << ys << " " << zs << " and " << xe << " " << ye << " " << ze << std::endl;
             }
 
 			// check whether a fibre end point leaves the domain and if so initialise fibre again

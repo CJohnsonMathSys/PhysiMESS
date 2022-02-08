@@ -577,6 +577,9 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 	pCell->state.simple_pressure = 0.0;
 	pCell->state.neighbors.clear(); // new 1.8.0
 
+    pCell->parameters.X_crosslink_count = 0;
+    pCell->parameters.T_crosslink_count = 0;
+
 	//First check the neighbors in my current voxel
 	std::vector<Cell*>::iterator neighbor;
 	std::vector<Cell*>::iterator end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
@@ -602,11 +605,11 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 		}
 	}
 
-    if (pCell->type_name == "fibre")
+    /*if (pCell->type_name == "fibre")
     {
         std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " X cross-links and "
                      << pCell->parameters.T_crosslink_count << " T cross-links " << std::endl;
-    }
+    }*/
 
 	pCell->update_motility_vector(dt); 
 	pCell->velocity += phenotype.motility.motility_vector;
