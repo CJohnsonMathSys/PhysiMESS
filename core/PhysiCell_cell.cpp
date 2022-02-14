@@ -861,12 +861,21 @@ void Cell::copy_function_pointers(Cell* copy_me)
 	return; 
 }
 
-void Cell::CrossProduct(std::vector<double> vector_A, std::vector<double> vector_B, int C_P[])
+void Cell::CrossProduct(double vector_A[], double vector_B[], double C_P[])
 {
     C_P[0] = vector_A[1] * vector_B[2] - vector_A[2] * vector_B[1];
     C_P[1] = -(vector_A[0] * vector_B[2] - vector_A[2] * vector_B[0]);
     C_P[2] = vector_A[0] * vector_B[1] - vector_A[1] * vector_B[0];
     return;
+}
+
+double Cell::DotProduct(double vector_A[], double vector_B[])
+{
+    double dotproduct = 0;
+    for (int i = 0; i < 3; i++){
+        dotproduct = dotproduct + vector_A[i] * vector_B[i];
+    }
+    return dotproduct;
 }
 
 void Cell::add_potentials(Cell* other_agent)
@@ -1112,108 +1121,163 @@ void Cell::add_potentials(Cell* other_agent)
     }
 
     else if(this->type_name == "fibre" && (*other_agent).type_name == "fibre") {
-        // fibre-fibre interaction
         //std::cout << "fibre " << this->ID << " tested against fibre " << other_agent->ID << std::endl;
 
         //determine whether fibres cross-link
         /* will need to optimise this more when we have lots of fibres e.g.
            may want to check only fibres within a given radius
         */
-        std::vector<double> point1(3, 0.0);
-        std::vector<double> point2(3, 0.0);
-        std::vector<double> point3(3, 0.0);
-        std::vector<double> point4(3, 0.0);
+
+        // fibre endpoints
+        double point1[3];
+        double point2[3];
+        double point3[3];
+        double point4[3];
         for (int i = 0; i < 3; i++) {
-            // end points of "this" fibre
+            // endpoints of "this" fibre
             point1[i] = this->position[i] - this->parameters.mLength * this->state.orientation[i];
             point2[i] = this->position[i] + this->parameters.mLength * this->state.orientation[i];
-            // end points of "neighbor" fibre
+            // endpoints of "neighbor" fibre
             point3[i] = (*other_agent).position[i] - this->parameters.mLength * (*other_agent).state.orientation[i];
             point4[i] = (*other_agent).position[i] + this->parameters.mLength * (*other_agent).state.orientation[i];
         }
 
-        //CASE 1 FIBRES FORM TRUE CROSS
-        // determine all relevant additional vectors:
-        std::vector<double> point1_to_point3(3, 0.0);
-        std::vector<double> point1_to_point4(3, 0.0);
-        std::vector<double> point3_to_point2(3, 0.0);
-        std::vector<double> point3_to_point1(3, 0.0);
+        //vectors between fibre endpoints
+        double p1_to_p2[3];
+        double p3_to_p4[3];
+        double p1_to_p3[3];
         for (int i = 0; i < 3; i++) {
-            point1_to_point3[i] = point3[i] - point1[i];
-            point1_to_point4[i] = point4[i] - point1[i];
-            point3_to_point2[i] = point2[i] - point3[i];
-            point3_to_point1[i] = - point1_to_point3[i];
+            p1_to_p2[i] = point2[i] - point1[i];
+            p3_to_p4[i] = point4[i] - point3[i];
+            p1_to_p3[i] = point3[i] - point1[i];
         }
 
-        // calculate the required cross products:
-        int CP1[3];
-        int CP2[3];
-        int CP3[3];
-        int CP4[3];
-        CrossProduct(point1_to_point3, this->state.orientation, CP1);
-        CrossProduct(point1_to_point4, this->state.orientation, CP2);
-        CrossProduct(point3_to_point1, (*other_agent).state.orientation, CP3);
-        CrossProduct(point3_to_point2, (*other_agent).state.orientation, CP4);
+        //cross product of fibre vector
+        double FCP[3];
+        CrossProduct(p1_to_p2, p3_to_p4, FCP);
+        // test if fibres intersect
+        // if fibres are coplanar and parallel test1 = 0
+        double test1 = DotProduct(FCP,FCP);
+        // if fibres are skew test2 != 0
+        // note we include a tolerance on test2 to allow for fibre radius
+        // NEED TO DECIDE ON THIS TOLERANCE
+        double test2 = DotProduct(p1_to_p3,FCP);
+        if (test1 != 0 && abs(test2) < 0.1) {
+            // calculate the required coefficients (including dot products):
+            double a = DotProduct(p1_to_p2, p1_to_p3) / DotProduct(p1_to_p2, p1_to_p2);
+            double b = DotProduct(p1_to_p2, p3_to_p4) / DotProduct(p1_to_p2, p1_to_p2);
+            // form relevant additional vectors
+            double c[3];
+            double n[3];
+            for (int i = 0; i < 3; i++) {
+                c[i] = b * p1_to_p2[i] - p3_to_p4[i];
+                n[i] = p1_to_p3[i] - a * p1_to_p2[i];
+            }
+            // calculate the t values for each fibre
+            double tq = DotProduct(c, n) / DotProduct(c, c);
+            double tp = a + b * tq;
 
-        double DP1 = 0.0;
-        double DP2 = 0.0;
-        for (int i = 0; i < 3; i++) {
-            DP1 += CP1[i] * CP2[i];
-            DP2 += CP3[i] * CP4[i];
-        }
+            // if the t values for the line extensions of fibres are both in [0,1] fibres intersect
+            // note we include a tolerance on to allow for fibre line thickness
+            // NEED TO DECIDE ON THIS TOLERANCE
+            if (-0.025 < tq && tq < 1.025 && -0.025 < tp && tp < 1.025) {
+                if (0 < tq && tq < 1 && 0 < tp && tp < 1) {
+                    this->parameters.X_crosslink_count++;
+                }
+                else {
+                    this->parameters.T_crosslink_count++;
+                }
+            }
 
-        if (DP1 < 0 && DP2 < 0) {
-            //std::cout << "fibres cross-link in X shape" << std::endl;
-            this->parameters.X_crosslink_count++;
-        }
 
-        //CASE 2 FIBRES CONNECT AT ONE FIBRE ENDPOINT - T SHAPE
-        double DCP1 = 0.0;
-        double DCP2 = 0.0;
-        double DCP3 = 0.0;
-        double DCP4 = 0.0;
-        for (int i = 0; i < 3; i++) {
-            DCP1 += CP1[i] * CP1[i];
-            DCP2 += CP2[i] * CP2[i];
-            DCP3 += CP3[i] * CP3[i];
-            DCP4 += CP4[i] * CP4[i];
         }
+            /*
+            //CASE 1 FIBRES FORM TRUE CROSS
+            // determine all relevant additional vectors:
+            double point1_to_point3[3];
+            double point1_to_point4[3];
+            double point3_to_point2[3];
+            double point3_to_point1[3];
+            double orientation1[3];
+            double orientation2[3];
+            for (int i = 0; i < 3; i++) {
+                point1_to_point3[i] = point3[i] - point1[i];
+                point1_to_point4[i] = point4[i] - point1[i];
+                point3_to_point2[i] = point2[i] - point3[i];
+                point3_to_point1[i] = - point1_to_point3[i];
+                orientation1[i] = this->state.orientation[i];
+                orientation2[i] = (*other_agent).state.orientation[i];
+            }
 
-        std::vector<double> fibre1_min_point(3, 0.0);
-        std::vector<double> fibre1_max_point(3, 0.0);
-        std::vector<double> fibre2_min_point(3, 0.0);
-        std::vector<double> fibre2_max_point(3, 0.0);
-        for (int i = 0; i < 3; i++)
-        {
-            fibre1_min_point[i] = std::min(point1[i], point2[i]);
-            fibre1_max_point[i] = std::max(point1[i], point2[i]);
-            fibre2_min_point[i] = std::min(point3[i], point4[i]);
-            fibre2_max_point[i] = std::max(point3[i], point4[i]);
-        }
+            // calculate the required cross products:
+            double CP1[3];
+            double CP2[3];
+            double CP3[3];
+            double CP4[3];
+            CrossProduct(point1_to_point3, orientation1, CP1);
+            CrossProduct(point1_to_point4, orientation1, CP2);
+            CrossProduct(point3_to_point1, orientation2, CP3);
+            CrossProduct(point3_to_point2, orientation2, CP4);
 
-        if (DCP1 == 0 && fibre1_min_point[0] <= point3[0] && point3[0] <= fibre1_max_point[0] && fibre1_min_point[1] <= point3[1] && point3[1] <= fibre1_max_point[1] && fibre1_min_point[2] <= point3[2] && point3[2] <= fibre1_max_point[2])
-        {
-            //std::cout << " fibres cross-link in T shape" << std::endl;
-            this->parameters.T_crosslink_count++;
-        }
+            double DP1 = 0.0;
+            double DP2 = 0.0;
+            for (int i = 0; i < 3; i++) {
+                DP1 += CP1[i] * CP2[i];
+                DP2 += CP3[i] * CP4[i];
+            }
 
-        if (DCP2 == 0 && fibre1_min_point[0] <= point4[0] && point4[0] <= fibre1_max_point[0] && fibre1_min_point[1] <= point4[1] && point4[1] <= fibre1_max_point[1] && fibre1_min_point[2] <= point4[2] && point4[2] <= fibre1_max_point[2])
-        {
-            //std::cout << "fibres cross-link in T shape" << std::endl;
-            this->parameters.T_crosslink_count++;
-        }
+            if (DP1 < 0 && DP2 < 0) {
+                std::cout << "fibres cross-link in X shape" << std::endl;
+                //this->parameters.X_crosslink_count++;
+            }
 
-        if (DCP3 == 0 && fibre2_min_point[0] <= point1[0] && point1[0] <= fibre2_max_point[0] && fibre2_min_point[1] <= point1[1] && point1[1] <= fibre2_max_point[1] && fibre2_min_point[2] <= point1[2] && point1[2] <= fibre2_max_point[2])
-        {
-            //std::cout << "fibres cross-link in T shape" << std::endl;
-            this->parameters.T_crosslink_count++;
-        }
+            //CASE 2 FIBRES CONNECT AT ONE FIBRE ENDPOINT - T SHAPE
+            double DCP1 = 0.0;
+            double DCP2 = 0.0;
+            double DCP3 = 0.0;
+            double DCP4 = 0.0;
+            for (int i = 0; i < 3; i++) {
+                DCP1 += CP1[i] * CP1[i];
+                DCP2 += CP2[i] * CP2[i];
+                DCP3 += CP3[i] * CP3[i];
+                DCP4 += CP4[i] * CP4[i];
+            }
 
-        if (DCP4 == 0 && fibre2_min_point[0] <= point2[0] && point2[0] <= fibre2_max_point[0] && fibre2_min_point[1] <= point2[1] && point2[1] <= fibre2_max_point[1] && fibre2_min_point[2] <= point2[2] && point2[2] <= fibre2_max_point[2])
-        {
-            //std::cout << "fibres cross-link in T shape" << std::endl;
-            this->parameters.T_crosslink_count++;
-        }
+            std::vector<double> fibre1_min_point(3, 0.0);
+            std::vector<double> fibre1_max_point(3, 0.0);
+            std::vector<double> fibre2_min_point(3, 0.0);
+            std::vector<double> fibre2_max_point(3, 0.0);
+            for (int i = 0; i < 3; i++)
+            {
+                fibre1_min_point[i] = std::min(point1[i], point2[i]);
+                fibre1_max_point[i] = std::max(point1[i], point2[i]);
+                fibre2_min_point[i] = std::min(point3[i], point4[i]);
+                fibre2_max_point[i] = std::max(point3[i], point4[i]);
+            }
+
+            if (DCP1 == 0 && fibre1_min_point[0] <= point3[0] && point3[0] <= fibre1_max_point[0] && fibre1_min_point[1] <= point3[1] && point3[1] <= fibre1_max_point[1] && fibre1_min_point[2] <= point3[2] && point3[2] <= fibre1_max_point[2])
+            {
+                std::cout << " fibres cross-link in T shape" << std::endl;
+                //this->parameters.T_crosslink_count++;
+            }
+
+            if (DCP2 == 0 && fibre1_min_point[0] <= point4[0] && point4[0] <= fibre1_max_point[0] && fibre1_min_point[1] <= point4[1] && point4[1] <= fibre1_max_point[1] && fibre1_min_point[2] <= point4[2] && point4[2] <= fibre1_max_point[2])
+            {
+                std::cout << "fibres cross-link in T shape" << std::endl;
+                //this->parameters.T_crosslink_count++;
+            }
+
+            if (DCP3 == 0 && fibre2_min_point[0] <= point1[0] && point1[0] <= fibre2_max_point[0] && fibre2_min_point[1] <= point1[1] && point1[1] <= fibre2_max_point[1] && fibre2_min_point[2] <= point1[2] && point1[2] <= fibre2_max_point[2])
+            {
+                std::cout << "fibres cross-link in T shape" << std::endl;
+                //this->parameters.T_crosslink_count++;
+            }
+
+            if (DCP4 == 0 && fibre2_min_point[0] <= point2[0] && point2[0] <= fibre2_max_point[0] && fibre2_min_point[1] <= point2[1] && point2[1] <= fibre2_max_point[1] && fibre2_min_point[2] <= point2[2] && point2[2] <= fibre2_max_point[2])
+            {
+                std::cout << "fibres cross-link in T shape" << std::endl;
+                //this->parameters.T_crosslink_count++;
+            }*/
 
     }
     else
