@@ -930,7 +930,7 @@ void Cell::add_potentials(Cell* other_agent)
         }
 
         // August 2017 - back to the original if both have same coefficient
-        double effective_repulsion = sqrt( phenotype.mechanics.cell_cell_repulsion_strength * other_agent->phenotype.mechanics.cell_cell_repulsion_strength );
+        double effective_repulsion = 100*sqrt( phenotype.mechanics.cell_cell_repulsion_strength * other_agent->phenotype.mechanics.cell_cell_repulsion_strength );
         temp_r *= effective_repulsion;
 
         // temp_r *= phenotype.mechanics.cell_cell_repulsion_strength; // original
@@ -1045,20 +1045,19 @@ void Cell::add_potentials(Cell* other_agent)
         // check distance relative repulsion and adhesion distances
         //double R = 2*(phenotype.geometry.radius + (*other_agent).phenotype.geometry.radius);
         // cell should repel from a fibre if it comes within cell radius plus fibre radius (note fibre radius ~2 micron)
-        double R = phenotype.geometry.radius+2.0;
+        double R = phenotype.geometry.radius+(*other_agent).parameters.mRadius;
         // cell should feel adhesion over
         double max_interactive_distance = phenotype.mechanics.relative_maximum_adhesion_distance * phenotype.geometry.radius +
-                                   (*other_agent).phenotype.mechanics.relative_maximum_adhesion_distance * (*other_agent).phenotype.geometry.radius;
-
+                                   (*other_agent).phenotype.mechanics.relative_maximum_adhesion_distance * (*other_agent).parameters.mRadius;
 
         double temp_r =0;
         if( distance > R )
         {
-            //std::cout << " there is no repulsion between " << this->type_name << " and " << (*other_agent).type_name << std::endl;
+            //std::cout << " there is no repulsion between " << this->type_name << this->ID << " and " << (*other_agent).type_name << (*other_agent).ID << std::endl;
             temp_r=0;
         }
         else {
-            //std::cout << " there is additional repulsion between " << this->type_name << " and " << (*other_agent).type_name << std::endl;
+            //std::cout << " there is repulsion between " << this->type_name << " " << this->ID << " and " << (*other_agent).type_name << " " << (*other_agent).ID << std::endl;
             // temp_r = 1 - distance/R;
             temp_r = -distance; // -d
             temp_r /= R; // -d/R
@@ -1066,11 +1065,14 @@ void Cell::add_potentials(Cell* other_agent)
             temp_r *= temp_r; // (1-d/R)^2
 
             // add the relative pressure contribution NOT SURE IF NEEDED
-            state.simple_pressure += ( temp_r / simple_pressure_scale ); // New July 2017
-        }
+            state.simple_pressure += (temp_r / simple_pressure_scale); // New July 2017
 
-        double effective_repulsion = sqrt( phenotype.mechanics.cell_cell_repulsion_strength * other_agent->phenotype.mechanics.cell_cell_repulsion_strength );
-        temp_r *= effective_repulsion;
+
+            double effective_repulsion = sqrt(phenotype.mechanics.cell_cell_repulsion_strength *
+                                              other_agent->phenotype.mechanics.cell_cell_repulsion_strength);
+            temp_r *= effective_repulsion;
+            //std::cout << " repulsion strength is " << temp_r << std::endl;
+        }
 
         axpy( &velocity , temp_r , displacement );
 

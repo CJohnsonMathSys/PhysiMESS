@@ -605,11 +605,11 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 		}
 	}
 
-    if (pCell->type_name == "fibre")
+    /*if (pCell->type_name == "fibre")
     {
         std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " X cross-links and "
                      << pCell->parameters.T_crosslink_count << " T cross-links " << std::endl;
-    }
+    }*/
 
 	pCell->update_motility_vector(dt); 
 	pCell->velocity += phenotype.motility.motility_vector;

@@ -112,6 +112,7 @@ class Cell_Parameters
 	int necrosis_type; // deprecate 
 	
 	double mLength=0;
+    double mRadius=0;
 
     int X_crosslink_count=0;
     int T_crosslink_count=0;
