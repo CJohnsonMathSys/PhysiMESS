@@ -114,6 +114,8 @@ class Cell_Parameters
 	double mLength=0;
     double mRadius=0;
 
+    double stuck_counter=0;
+
     int X_crosslink_count=0;
     int T_crosslink_count=0;
 
@@ -184,6 +186,7 @@ class Cell : public Basic_Agent
 	void advance_bundled_phenotype_functions( double dt_ ); 
 	
 	void add_potentials(Cell*);       // Add repulsive and adhesive forces.
+    void degrade_fibre(Cell*); // for use in fibre degradation models
 	void set_previous_velocity(double xV, double yV, double zV);
 	int get_current_mechanics_voxel_index();
 	void turn_off_reactions(double); 		  // Turn off all the reactions of the cell
@@ -195,7 +198,7 @@ class Cell : public Basic_Agent
 	void flag_for_removal( void ); // done 
 	
 	void start_death( int death_model_index ); 
-	void lyse_cell( void ); 
+	void lyse_cell( void );
 
 	Cell* divide( void );
 	void die( void ); 
@@ -232,7 +235,7 @@ class Cell : public Basic_Agent
 	void update_voxel_in_container(void);
 	void copy_data(Cell *);
 	
-	void ingest_cell( Cell* pCell_to_eat ); // for use in predation, e.g., immune cells 
+	void ingest_cell( Cell* pCell_to_eat ); // for use in predation, e.g., immune cells
 
 	void attach_cell( Cell* pAddMe ); // done 
 	void detach_cell( Cell* pRemoveMe ); // done 

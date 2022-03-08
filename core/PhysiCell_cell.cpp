@@ -765,18 +765,20 @@ void Cell::update_position( double dt )
 		constants_defined = true; 
 	}
 	
-	// new AUgust 2017
+	// new August 2017
 	if( default_microenvironment_options.simulate_2D == true )
 	{ velocity[2] = 0.0; }
-	
-	std::vector<double> old_position(position); 
-	axpy( &position , d1 , velocity );  
-	axpy( &position , d2 , previous_velocity );  
+
+	std::vector<double> old_position(position);
+    axpy( &position , d1 , velocity );
+	axpy( &position , d2 , previous_velocity );
 	// overwrite previous_velocity for future use 
 	// if(sqrt(dist(old_position, position))>3* phenotype.geometry.radius)
 		// std::cout<<sqrt(dist(old_position, position))<<"old_position: "<<old_position<<", new position: "<< position<<", velocity: "<<velocity<<", previous_velocity: "<< previous_velocity<<std::endl;
-	
-	previous_velocity = velocity; 
+    if  (this->type_name != "fibre" && previous_velocity[1]!=0  && dist(old_position, position)<0.005){
+        this->parameters.stuck_counter++;
+    }
+	previous_velocity = velocity;
 	
 	velocity[0]=0; velocity[1]=0; velocity[2]=0;
 	if(get_container()->underlying_mesh.is_position_valid(position[0],position[1],position[2]))
@@ -878,6 +880,31 @@ double Cell::DotProduct(double vector_A[], double vector_B[])
     return dotproduct;
 }
 
+void Cell::degrade_fibre(Cell* fibre_to_degrade )
+{
+        // don't degrade anything that is not a fibre
+        if( (*fibre_to_degrade).type_name != "fibre")
+        { return; }
+
+        int index = (*fibre_to_degrade).ID;
+
+        // release any attached cells
+        (*fibre_to_degrade).remove_all_attached_cells();
+
+        // move last item to index location
+        (*all_cells)[ (*all_cells).size()-1 ]->index=index;
+        (*all_cells)[index] = (*all_cells)[ (*all_cells).size()-1 ];
+        // shrink the vector
+        (*all_cells).pop_back();
+
+        // deregister agent in from the agent container
+        (*fibre_to_degrade).get_container()->remove_agent(fibre_to_degrade);
+        // de-allocate (delete) the cell;
+        delete (fibre_to_degrade);
+
+        return;
+}
+
 void Cell::add_potentials(Cell* other_agent)
 {
 	// if( this->ID == other_agent->ID )
@@ -974,8 +1001,7 @@ void Cell::add_potentials(Cell* other_agent)
 
     else if(this->type_name != "fibre" && (*other_agent).type_name == "fibre")
     {
-        //std::cout << "second if statement " << this->type_name << " interacting with " << (*other_agent).type_name
-            //<< std::endl;
+        //std::cout << "second if statement " << this->type_name << " interacting with " << (*other_agent).type_name << std::endl;
 
         double fibre_length = 2*(*other_agent).parameters.mLength;
         std::vector<double> fibre_to_cell (3, 0.0); // vector pointing from fibre_start to cell
@@ -1065,13 +1091,11 @@ void Cell::add_potentials(Cell* other_agent)
             temp_r *= temp_r; // (1-d/R)^2
 
             // add the relative pressure contribution NOT SURE IF NEEDED
-            state.simple_pressure += (temp_r / simple_pressure_scale); // New July 2017
-
+            state.simple_pressure += (temp_r / simple_pressure_scale);
 
             double effective_repulsion = sqrt(phenotype.mechanics.cell_cell_repulsion_strength *
                                               other_agent->phenotype.mechanics.cell_cell_repulsion_strength);
             temp_r *= effective_repulsion;
-            //std::cout << " repulsion strength is " << temp_r << std::endl;
         }
 
         axpy( &velocity , temp_r , displacement );
@@ -1080,7 +1104,6 @@ void Cell::add_potentials(Cell* other_agent)
         double fibre_repulsion=0;
         if (distance < max_interactive_distance){
 
-            //std::cout << " there is adhesion between " << this->type_name << " and " << (*other_agent).type_name << std::endl;
             double cell_velocity_dot_fibre_direction = 0.;
             for (unsigned int j = 0; j < 3; j++) {
                 cell_velocity_dot_fibre_direction += (*other_agent).state.orientation[j]
@@ -1105,11 +1128,16 @@ void Cell::add_potentials(Cell* other_agent)
 
             fibre_repulsion = (*other_agent).parameters.mVelocityContact * xiq;
 
-            //std::cout << "   fibre adhesion is " << fibre_adhesion << std::endl;
-            //std::cout << "   fibre repulsion is " << fibre_adhesion << std::endl;
-
             axpy(&velocity, fibre_adhesion, (*other_agent).state.orientation);
             naxpy(&velocity, fibre_repulsion, phenotype.motility.motility_vector);
+
+            if (this->parameters.stuck_counter >10 && distance < max_interactive_distance) {
+                std::cout << "HELP! cell " << this->ID << " is stuck!" << std::endl;
+                std::cout << "cell is stuck near fibre " << (*other_agent).ID << " at a distance of " << distance << std::endl;
+                this->degrade_fibre(other_agent);
+                this->parameters.stuck_counter=0;
+            }
+
             state.neighbors.push_back(other_agent);
         }
 
