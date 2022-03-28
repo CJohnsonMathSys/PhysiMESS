@@ -224,6 +224,10 @@ gif:
 	 
 movie:
 	ffmpeg -r $(FRAMERATE) -f image2 -i $(OUTPUT)/snapshot%08d.jpg -vcodec libx264 -pix_fmt yuv420p -strict -2 -tune animation -crf 15 -acodec none $(OUTPUT)/out.mp4
+
+movie2:
+	ffmpeg -r $(FRAMERATE) -f image2 -i $(OUTPUT)/output%08d.png -vcodec libx264 -pix_fmt yuv420p -strict -2 -tune animation -crf 15 -acodec none $(OUTPUT)/out2.mp4
+	
 	
 # upgrade rules 
 

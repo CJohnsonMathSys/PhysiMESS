@@ -195,7 +195,7 @@ std::vector<double> normalize( std::vector<double>& v )
 
  for( unsigned int i=0; i < v.size(); i++ )
  { norm += ( v[i]*v[i] ); }
- norm = sqrt( norm ); 
+ norm = sqrt( norm );
 
  for( unsigned int i=0; i < v.size(); i++ )
  { output[i] /= norm ; }

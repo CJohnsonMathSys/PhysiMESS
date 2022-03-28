@@ -233,7 +233,8 @@ void Cell::update_motility_vector( double dt_ )
 		phenotype.motility.motility_vector.assign( 3, 0.0 ); 
 		return; 
 	}
-	
+
+    // As per PhysiCell we update the motility based on persistence time
 	if( UniformRandom() < dt_ / phenotype.motility.persistence_time || phenotype.motility.persistence_time < dt_ )
 	{
 		// choose a uniformly random unit vector 
@@ -255,11 +256,11 @@ void Cell::update_motility_vector( double dt_ )
 		randvec[0] *= cos( temp_angle ); // cos(theta)*sin(phi)
 		randvec[1] *= sin( temp_angle ); // sin(theta)*sin(phi)
 		randvec[2] = cos_phi; //  cos(phi)
-		
+
 		// if the update_bias_vector function is set, use it  
 		if( functions.update_migration_bias )
 		{
-			functions.update_migration_bias( this,phenotype,dt_ ); 
+            functions.update_migration_bias( this,phenotype,dt_ );
 		}
 		
 		phenotype.motility.motility_vector = phenotype.motility.migration_bias_direction; // motiltiy = bias_vector
@@ -272,9 +273,57 @@ void Cell::update_motility_vector( double dt_ )
 		normalize( &(phenotype.motility.motility_vector) ); 
 		
 		phenotype.motility.motility_vector *= phenotype.motility.migration_speed; 
-	}	
+	}
+
 	return; 
-} 
+}
+
+void Cell::force_update_motility_vector( double dt_ )
+{
+    if (phenotype.motility.is_motile == false) {
+        phenotype.motility.motility_vector.assign(3, 0.0);
+        return;
+    }
+
+    // force cell to update its motility because it is stuck
+    // choose a uniformly random unit vector
+    double temp_angle = 6.28318530717959 * UniformRandom();
+    double temp_phi = 3.1415926535897932384626433832795 * UniformRandom();
+
+    double sin_phi = sin(temp_phi);
+    double cos_phi = cos(temp_phi);
+
+    if (phenotype.motility.restrict_to_2D == true) {
+        sin_phi = 1.0;
+        cos_phi = 0.0;
+    }
+
+    std::vector<double> randvec;
+    randvec.resize(3, sin_phi);
+
+    randvec[0] *= cos(temp_angle); // cos(theta)*sin(phi)
+    randvec[1] *= sin(temp_angle); // sin(theta)*sin(phi)
+    randvec[2] = cos_phi; //  cos(phi)
+
+    // if the update_bias_vector function is set, use it
+    if (functions.update_migration_bias) {
+       functions.update_migration_bias(this, phenotype, dt_);
+    }
+
+    //phenotype.motility.motility_vector *= -1.0;//phenotype.motility.migration_bias_direction; // motiltiy = bias_vector
+    //phenotype.motility.motility_vector *= phenotype.motility.migration_bias; // motility = bias*bias_vector
+
+    double one_minus_bias = 1.0;// - phenotype.motility.migration_bias;
+
+    axpy(&(phenotype.motility.motility_vector), one_minus_bias, randvec); // motility = (1-bias)*randvec + bias*bias_vector
+
+    normalize(&(phenotype.motility.motility_vector));
+
+    phenotype.motility.motility_vector *= phenotype.motility.migration_speed;
+
+    return;
+}
+
 
 void Cell::advance_bundled_phenotype_functions( double dt_ )
 {
@@ -775,7 +824,8 @@ void Cell::update_position( double dt )
 	// overwrite previous_velocity for future use 
 	// if(sqrt(dist(old_position, position))>3* phenotype.geometry.radius)
 		// std::cout<<sqrt(dist(old_position, position))<<"old_position: "<<old_position<<", new position: "<< position<<", velocity: "<<velocity<<", previous_velocity: "<< previous_velocity<<std::endl;
-    if  (this->type_name != "fibre" && previous_velocity[1]!=0  && dist(old_position, position)<0.005){
+    double movement_threshold = 0.05;
+    if  (this->type_name != "fibre" && phenotype.motility.is_motile == true  && dist(old_position, position) < movement_threshold){
         this->parameters.stuck_counter++;
     }
 	previous_velocity = velocity;
@@ -882,10 +932,13 @@ double Cell::DotProduct(double vector_A[], double vector_B[])
 
 void Cell::degrade_fibre(Cell* fibre_to_degrade )
 {
-        // don't degrade anything that is not a fibre
-        if( (*fibre_to_degrade).type_name != "fibre")
-        { return; }
+    // don't degrade anything that is not a fibre
+    if( (*fibre_to_degrade).type_name != "fibre")
+    { return; }
 
+    // attempt to make this thread safe - NOTE IT ISN'T SO MUST BE A PROBLEM IN ADD_POTENTIALS
+    #pragma omp critical
+    {
         int index = (*fibre_to_degrade).ID;
 
         // release any attached cells
@@ -901,8 +954,94 @@ void Cell::degrade_fibre(Cell* fibre_to_degrade )
         (*fibre_to_degrade).get_container()->remove_agent(fibre_to_degrade);
         // de-allocate (delete) the cell;
         delete (fibre_to_degrade);
+    }
 
-        return;
+    return;
+}
+
+void Cell::check_fibre_crosslinks(Cell* fibre_neighbor){
+
+    if( this == fibre_neighbor)
+    { return; }
+
+    // this function just acts between a pair of fibres - it determines whether fibres cross-link
+    if(this->type_name == "fibre" && (*fibre_neighbor).type_name == "fibre") {
+
+        // fibre endpoints
+        double point1[3];
+        double point2[3];
+        double point3[3];
+        double point4[3];
+        for (int i = 0; i < 3; i++) {
+            // endpoints of "this" fibre
+            point1[i] = this->position[i] - this->parameters.mLength * this->state.orientation[i];
+            point2[i] = this->position[i] + this->parameters.mLength * this->state.orientation[i];
+            // endpoints of "neighbor" fibre
+            point3[i] = (*fibre_neighbor).position[i] - this->parameters.mLength * (*fibre_neighbor).state.orientation[i];
+            point4[i] = (*fibre_neighbor).position[i] + this->parameters.mLength * (*fibre_neighbor).state.orientation[i];
+        }
+
+        //vectors between fibre endpoints
+        double p1_to_p2[3];
+        double p3_to_p4[3];
+        double p1_to_p3[3];
+        for (int i = 0; i < 3; i++) {
+            p1_to_p2[i] = point2[i] - point1[i];
+            p3_to_p4[i] = point4[i] - point3[i];
+            p1_to_p3[i] = point3[i] - point1[i];
+        }
+
+        //cross product of fibre vector
+        double FCP[3];
+        CrossProduct(p1_to_p2, p3_to_p4, FCP);
+        // test if fibres intersect
+        // if fibres are coplanar and parallel test1 = 0
+        double test1 = DotProduct(FCP,FCP);
+        // if fibres are skew test2 != 0
+        // note we include a tolerance on test2 to allow for fibre radius
+        // NEED TO DECIDE ON THIS TOLERANCE - is it actually the fibre radius
+        double test2_tolerance = this->parameters.mRadius;//0.1;
+        double test2 = DotProduct(p1_to_p3,FCP);
+        if (test1 != 0 && abs(test2) < test2_tolerance) {
+            // calculate the required coefficients (including dot products):
+            double a = DotProduct(p1_to_p2, p1_to_p3) / DotProduct(p1_to_p2, p1_to_p2);
+            double b = DotProduct(p1_to_p2, p3_to_p4) / DotProduct(p1_to_p2, p1_to_p2);
+            // form relevant additional vectors
+            double c[3];
+            double n[3];
+            for (int i = 0; i < 3; i++) {
+                c[i] = b * p1_to_p2[i] - p3_to_p4[i];
+                n[i] = p1_to_p3[i] - a * p1_to_p2[i];
+            }
+            // calculate the t values for each fibre
+            double tq = DotProduct(c, n) / DotProduct(c, c);
+            double tp = a + b * tq;
+
+            // if the t values for the line extensions of fibres are both in [0,1] fibres intersect
+            // note we include a tolerance on to allow for fibre radius - NEED TO CHECK THIS WHEN FIBRES HAVE DIFFERENT LENGTHS
+            double tolerance = this->parameters.mRadius/(2*this->parameters.mLength);
+            double lower_bound = 0.0 - tolerance;
+            double upper_bound = 1.0 + tolerance;
+            if (lower_bound <= tq && tq <= upper_bound && lower_bound <= tp && tp <= upper_bound) {
+                this->parameters.X_crosslink_count++;
+                /*if (0 < tq && tq < 1 && 0 < tp && tp < 1) {
+                    std::cout << "fibre " << this->ID << " crosslinks in an X shape with fibre " <<  (*fibre_neighbor).ID << std::endl;
+                }
+                else {
+                    //this->parameters.T_crosslink_count++;
+                    std::cout << "fibre " << this->ID << " crosslinks in a T shape with fibre " <<  (*fibre_neighbor).ID << std::endl;
+                }*/
+                for (int index = 0; index < 3; index++){
+                    this->state.crosslink_point[index] = point1[index] + tp*p1_to_p2[index];
+                }
+            }
+        }
+    }
+
+    else
+    { return; }
+
+    return;
 }
 
 void Cell::add_potentials(Cell* other_agent)
@@ -913,7 +1052,9 @@ void Cell::add_potentials(Cell* other_agent)
 
     if(this->type_name != "fibre" && (*other_agent).type_name != "fibre")
     {
-       //std::cout << "first if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
+        // std::cout << "cell agents interacting with cell agents" << std::endl;
+
+        //As per PhysiCell
         // 12 uniform neighbors at a close packing distance, after dividing out all constants
         static double simple_pressure_scale = 0.027288820670331; // 12 * (1 - sqrt(pi/(2*sqrt(3))))^2
         // 9.820170012151277; // 12 * ( 1 - sqrt(2*pi/sqrt(3)))^2
@@ -925,15 +1066,13 @@ void Cell::add_potentials(Cell* other_agent)
             distance += displacement[i] * displacement[i];
         }
         // Make sure that the distance is not zero
-
         distance = std::max(sqrt(distance), 0.00001);
 
         //Repulsive
         double R = phenotype.geometry.radius+ (*other_agent).phenotype.geometry.radius;
         double RN = phenotype.geometry.nuclear_radius + (*other_agent).phenotype.geometry.nuclear_radius;
         double temp_r, c;
-        if( distance > R )
-        {
+        if( distance > R ){
             temp_r=0;
         }
             // else if( distance < RN )
@@ -944,8 +1083,7 @@ void Cell::add_potentials(Cell* other_agent)
             // c -= M;
             // temp_r = ( c*distance/RN  + M  );
             // }
-        else
-        {
+        else{
             // temp_r = 1 - distance/R;
             temp_r = -distance; // -d
             temp_r /= R; // -d/R
@@ -957,7 +1095,7 @@ void Cell::add_potentials(Cell* other_agent)
         }
 
         // August 2017 - back to the original if both have same coefficient
-        double effective_repulsion = 100*sqrt( phenotype.mechanics.cell_cell_repulsion_strength * other_agent->phenotype.mechanics.cell_cell_repulsion_strength );
+        double effective_repulsion = sqrt( phenotype.mechanics.cell_cell_repulsion_strength * other_agent->phenotype.mechanics.cell_cell_repulsion_strength );
         temp_r *= effective_repulsion;
 
         // temp_r *= phenotype.mechanics.cell_cell_repulsion_strength; // original
@@ -1001,7 +1139,7 @@ void Cell::add_potentials(Cell* other_agent)
 
     else if(this->type_name != "fibre" && (*other_agent).type_name == "fibre")
     {
-        //std::cout << "second if statement " << this->type_name << " interacting with " << (*other_agent).type_name << std::endl;
+        //std::cout << "cell agent interacting with fibre agent" << std::endl;
 
         double fibre_length = 2*(*other_agent).parameters.mLength;
         std::vector<double> fibre_to_cell (3, 0.0); // vector pointing from fibre_start to cell
@@ -1023,7 +1161,6 @@ void Cell::add_potentials(Cell* other_agent)
                 displacement[i] = fibre_to_cell[i];
                 distance += displacement[i] * displacement[i];
             }
-            //distance = std::max(sqrt(fibre_to_cell_length_squared), 0.00001);
             // as per PhysiCell we ensure the distance is not set to 0
             distance = std::max(sqrt(distance), 0.00001);
             /*std::cout << " the cell is closest to the start of the fibre"
@@ -1033,12 +1170,10 @@ void Cell::add_potentials(Cell* other_agent)
         }
         else if (fibre_to_cell_dot_fibre_vector > fibre_length*fibre_length)
         {
-            //double displacement = 0.;
             for (unsigned int i=0; i<3; i++) {
                 displacement[i] = (this->position[i]-((*other_agent).position[i]
                            +(*other_agent).parameters.mLength*(*other_agent).state.orientation[i]));
                 distance += displacement[i] * displacement[i];
-
             }
             // as per PhysiCell we ensure the distance is not set to 0
             distance = std::max(sqrt(distance), 0.00001);
@@ -1046,7 +1181,6 @@ void Cell::add_potentials(Cell* other_agent)
                     << " - the distance is " << distance << std::endl;
             std::cout << " displacement vector is " << displacement[0] << " " << displacement[1] << " " <<displacement[2] << std::endl;
              */
-
         }
         else
         {
@@ -1069,21 +1203,19 @@ void Cell::add_potentials(Cell* other_agent)
         static double simple_pressure_scale = 0.027288820670331;
 
         // check distance relative repulsion and adhesion distances
-        //double R = 2*(phenotype.geometry.radius + (*other_agent).phenotype.geometry.radius);
         // cell should repel from a fibre if it comes within cell radius plus fibre radius (note fibre radius ~2 micron)
         double R = phenotype.geometry.radius+(*other_agent).parameters.mRadius;
         // cell should feel adhesion over
         double max_interactive_distance = phenotype.mechanics.relative_maximum_adhesion_distance * phenotype.geometry.radius +
                                    (*other_agent).phenotype.mechanics.relative_maximum_adhesion_distance * (*other_agent).parameters.mRadius;
 
+        // First Repulsion as per PhysiCell
         double temp_r =0;
         if( distance > R )
         {
-            //std::cout << " there is no repulsion between " << this->type_name << this->ID << " and " << (*other_agent).type_name << (*other_agent).ID << std::endl;
             temp_r=0;
         }
         else {
-            //std::cout << " there is repulsion between " << this->type_name << " " << this->ID << " and " << (*other_agent).type_name << " " << (*other_agent).ID << std::endl;
             // temp_r = 1 - distance/R;
             temp_r = -distance; // -d
             temp_r /= R; // -d/R
@@ -1094,26 +1226,31 @@ void Cell::add_potentials(Cell* other_agent)
             state.simple_pressure += (temp_r / simple_pressure_scale);
 
             double effective_repulsion = sqrt(phenotype.mechanics.cell_cell_repulsion_strength *
-                                              other_agent->phenotype.mechanics.cell_cell_repulsion_strength);
+                                                      (*other_agent).phenotype.mechanics.cell_cell_repulsion_strength);
             temp_r *= effective_repulsion;
         }
 
+        if( fabs(temp_r) < 1e-16 )
+        { return; }
+        temp_r /= distance;
+
         axpy( &velocity , temp_r , displacement );
 
+        //Then additional repulsion/adhesion as per Cicely's code
         double fibre_adhesion=0;
         double fibre_repulsion=0;
         if (distance < max_interactive_distance){
 
             double cell_velocity_dot_fibre_direction = 0.;
             for (unsigned int j = 0; j < 3; j++) {
-                cell_velocity_dot_fibre_direction += (*other_agent).state.orientation[j]
-                        * phenotype.motility.motility_vector[j];
+                cell_velocity_dot_fibre_direction += (*other_agent).state.orientation[j] * previous_velocity[j];
+                        //* phenotype.motility.motility_vector[j];
             }
 
             double cell_velocity = 0;
             for (unsigned int j = 0; j < velocity.size(); j++)
             {
-                cell_velocity += phenotype.motility.motility_vector[j] * phenotype.motility.motility_vector[j];
+                cell_velocity += previous_velocity[j]*previous_velocity[j];//phenotype.motility.motility_vector[j] * phenotype.motility.motility_vector[j];
             }
             cell_velocity = sqrt(cell_velocity);
 
@@ -1129,187 +1266,111 @@ void Cell::add_potentials(Cell* other_agent)
             fibre_repulsion = (*other_agent).parameters.mVelocityContact * xiq;
 
             axpy(&velocity, fibre_adhesion, (*other_agent).state.orientation);
-            naxpy(&velocity, fibre_repulsion, phenotype.motility.motility_vector);
+            //naxpy(&velocity, fibre_repulsion, phenotype.motility.motility_vector);
+            naxpy(&velocity, fibre_repulsion, previous_velocity);
 
-            if (this->parameters.stuck_counter >10 && distance < max_interactive_distance) {
-                std::cout << "HELP! cell " << this->ID << " is stuck!" << std::endl;
-                std::cout << "cell is stuck near fibre " << (*other_agent).ID << " at a distance of " << distance << std::endl;
-                this->degrade_fibre(other_agent);
-                this->parameters.stuck_counter=0;
+            int stuck_counter = 10;
+            if (this->parameters.stuck_counter > stuck_counter) {
+                //std::cout << "Cell " << this->ID << " is stuck at time " << PhysiCell_globals.current_time << " will attempt to degrade fibre " << std::endl;
+                double rand_degradation = UniformRandom();
+                double prob_degradation = 0.1;
+                if (this->parameters.fibredegradation == 1 && rand_degradation < prob_degradation) {
+                    this->degrade_fibre(other_agent);
+                }
             }
-
-            state.neighbors.push_back(other_agent);
         }
 
+        state.neighbors.push_back(other_agent);
     }
 
     else if(this->type_name == "fibre" && (*other_agent).type_name != "fibre")
     {
-        // fibre-cell interaction - do nothing at this time
-        //std::cout << "third if statement " << this->type_name << " interacting with " << other_agent->type_name << std::endl;
-        return;
+        //std::cout << "fibre agent interacting with cell agent" << std::endl;
+        /* note fibres get pushed by cells if they have no crosslinks
+         * we intend to update this to be that fibres with one cross link pivot at the crosslink location
+         */
+        if (this->parameters.X_crosslink_count < 1) {
+            // currently this is just a hack to say that fibres are not affected by any attractant cells
+            if (other_agent->type_name == "attractant"){
+                return;
+            }
+
+            //copied from cell-fibre interaction above
+            double fibre_length = 2 * this->parameters.mLength;
+            std::vector<double> fibre_to_cell(3, 0.0); // vector pointing from fibre_start to cell
+            double fibre_to_cell_length_squared = 0; // |fibre_to_cell| squared
+            double fibre_to_cell_dot_fibre_vector = 0; // scalar product fibre_to_cell * fibre_vector
+
+            double distance = 0;
+            for (unsigned int i = 0; i < 3; i++) {
+                fibre_to_cell[i] = (*other_agent).position[i] - (this->position[i] - this->parameters.mLength * this->state.orientation[i]);
+                fibre_to_cell_length_squared += fibre_to_cell[i] * fibre_to_cell[i];
+                fibre_to_cell_dot_fibre_vector += fibre_to_cell[i] * fibre_length * this->state.orientation[i];
+            }
+
+            if (fibre_to_cell_dot_fibre_vector < 0.) {
+                for (int i = 0; i < 3; i++) {
+                    displacement[i] = fibre_to_cell[i];
+                    distance += displacement[i] * displacement[i];
+                }
+                distance = std::max(sqrt(distance), 0.00001);
+            } else if (fibre_to_cell_dot_fibre_vector > fibre_length * fibre_length) {
+                for (unsigned int i = 0; i < 3; i++) {
+                    displacement[i] = ((*other_agent).position[i] - (this->position[i] + this->parameters.mLength * this->state.orientation[i]));
+                    distance += displacement[i] * displacement[i];
+                }
+                distance = std::max(sqrt(distance), 0.00001);
+            } else {
+                double fibre_to_cell_length_cos_alpha_squared = fibre_to_cell_dot_fibre_vector * fibre_to_cell_dot_fibre_vector / (fibre_length * fibre_length);
+                double l = sqrt(fibre_to_cell_length_cos_alpha_squared);
+                for (unsigned int i = 0; i < 3; i++) {
+                    displacement[i] = fibre_to_cell[i] - l * this->state.orientation[i];
+                    distance += displacement[i] * displacement[i];
+                }
+                distance = std::max(sqrt(distance), 0.00001);
+            }
+
+            // as per PhysiCell
+            static double simple_pressure_scale = 0.027288820670331;
+
+            // check distance relative repulsion and adhesion distances
+            // fibre should repel and be pushed by a cell if it comes within cell radius plus fibre radius (note fibre radius ~2 micron)
+            double R = phenotype.geometry.radius + this->parameters.mRadius;
+            // cell should feel adhesion over
+            //double max_interactive_distance = phenotype.mechanics.relative_maximum_adhesion_distance * phenotype.geometry.radius + this->phenotype.mechanics.relative_maximum_adhesion_distance * this->parameters.mRadius;
+
+            double temp_r = 0;
+            if (distance > R) {
+                temp_r = 0;
+            } else {
+                // temp_r = 1 - distance/R;
+                temp_r = -distance; // -d
+                temp_r /= R; // -d/R
+                temp_r += 1.0; // 1-d/R
+                temp_r *= temp_r; // (1-d/R)^2
+
+                // add the relative pressure contribution NOT SURE IF NEEDED
+                state.simple_pressure += (temp_r / simple_pressure_scale);
+
+                double effective_repulsion = sqrt(phenotype.mechanics.cell_cell_repulsion_strength *
+                                                  (*other_agent).phenotype.mechanics.cell_cell_repulsion_strength);
+                temp_r *= effective_repulsion;
+            }
+
+            if (fabs(temp_r) < 1e-16) { return; }
+            temp_r /= distance;
+
+            naxpy(&velocity, temp_r, displacement);
+        }
+
+        state.neighbors.push_back(other_agent);
     }
 
     else if(this->type_name == "fibre" && (*other_agent).type_name == "fibre") {
-        //std::cout << "fibre " << this->ID << " tested against fibre " << other_agent->ID << std::endl;
-
-        //determine whether fibres cross-link
-        /* will need to optimise this more when we have lots of fibres e.g.
-           may want to check only fibres within a given radius
-        */
-
-        // fibre endpoints
-        double point1[3];
-        double point2[3];
-        double point3[3];
-        double point4[3];
-        for (int i = 0; i < 3; i++) {
-            // endpoints of "this" fibre
-            point1[i] = this->position[i] - this->parameters.mLength * this->state.orientation[i];
-            point2[i] = this->position[i] + this->parameters.mLength * this->state.orientation[i];
-            // endpoints of "neighbor" fibre
-            point3[i] = (*other_agent).position[i] - this->parameters.mLength * (*other_agent).state.orientation[i];
-            point4[i] = (*other_agent).position[i] + this->parameters.mLength * (*other_agent).state.orientation[i];
-        }
-
-        //vectors between fibre endpoints
-        double p1_to_p2[3];
-        double p3_to_p4[3];
-        double p1_to_p3[3];
-        for (int i = 0; i < 3; i++) {
-            p1_to_p2[i] = point2[i] - point1[i];
-            p3_to_p4[i] = point4[i] - point3[i];
-            p1_to_p3[i] = point3[i] - point1[i];
-        }
-
-        //cross product of fibre vector
-        double FCP[3];
-        CrossProduct(p1_to_p2, p3_to_p4, FCP);
-        // test if fibres intersect
-        // if fibres are coplanar and parallel test1 = 0
-        double test1 = DotProduct(FCP,FCP);
-        // if fibres are skew test2 != 0
-        // note we include a tolerance on test2 to allow for fibre radius
-        // NEED TO DECIDE ON THIS TOLERANCE
-        double test2 = DotProduct(p1_to_p3,FCP);
-        if (test1 != 0 && abs(test2) < 0.1) {
-            // calculate the required coefficients (including dot products):
-            double a = DotProduct(p1_to_p2, p1_to_p3) / DotProduct(p1_to_p2, p1_to_p2);
-            double b = DotProduct(p1_to_p2, p3_to_p4) / DotProduct(p1_to_p2, p1_to_p2);
-            // form relevant additional vectors
-            double c[3];
-            double n[3];
-            for (int i = 0; i < 3; i++) {
-                c[i] = b * p1_to_p2[i] - p3_to_p4[i];
-                n[i] = p1_to_p3[i] - a * p1_to_p2[i];
-            }
-            // calculate the t values for each fibre
-            double tq = DotProduct(c, n) / DotProduct(c, c);
-            double tp = a + b * tq;
-
-            // if the t values for the line extensions of fibres are both in [0,1] fibres intersect
-            // note we include a tolerance on to allow for fibre line thickness
-            // NEED TO DECIDE ON THIS TOLERANCE
-            if (-0.025 < tq && tq < 1.025 && -0.025 < tp && tp < 1.025) {
-                if (0 < tq && tq < 1 && 0 < tp && tp < 1) {
-                    this->parameters.X_crosslink_count++;
-                }
-                else {
-                    this->parameters.T_crosslink_count++;
-                }
-            }
-
-
-        }
-            /*
-            //CASE 1 FIBRES FORM TRUE CROSS
-            // determine all relevant additional vectors:
-            double point1_to_point3[3];
-            double point1_to_point4[3];
-            double point3_to_point2[3];
-            double point3_to_point1[3];
-            double orientation1[3];
-            double orientation2[3];
-            for (int i = 0; i < 3; i++) {
-                point1_to_point3[i] = point3[i] - point1[i];
-                point1_to_point4[i] = point4[i] - point1[i];
-                point3_to_point2[i] = point2[i] - point3[i];
-                point3_to_point1[i] = - point1_to_point3[i];
-                orientation1[i] = this->state.orientation[i];
-                orientation2[i] = (*other_agent).state.orientation[i];
-            }
-
-            // calculate the required cross products:
-            double CP1[3];
-            double CP2[3];
-            double CP3[3];
-            double CP4[3];
-            CrossProduct(point1_to_point3, orientation1, CP1);
-            CrossProduct(point1_to_point4, orientation1, CP2);
-            CrossProduct(point3_to_point1, orientation2, CP3);
-            CrossProduct(point3_to_point2, orientation2, CP4);
-
-            double DP1 = 0.0;
-            double DP2 = 0.0;
-            for (int i = 0; i < 3; i++) {
-                DP1 += CP1[i] * CP2[i];
-                DP2 += CP3[i] * CP4[i];
-            }
-
-            if (DP1 < 0 && DP2 < 0) {
-                std::cout << "fibres cross-link in X shape" << std::endl;
-                //this->parameters.X_crosslink_count++;
-            }
-
-            //CASE 2 FIBRES CONNECT AT ONE FIBRE ENDPOINT - T SHAPE
-            double DCP1 = 0.0;
-            double DCP2 = 0.0;
-            double DCP3 = 0.0;
-            double DCP4 = 0.0;
-            for (int i = 0; i < 3; i++) {
-                DCP1 += CP1[i] * CP1[i];
-                DCP2 += CP2[i] * CP2[i];
-                DCP3 += CP3[i] * CP3[i];
-                DCP4 += CP4[i] * CP4[i];
-            }
-
-            std::vector<double> fibre1_min_point(3, 0.0);
-            std::vector<double> fibre1_max_point(3, 0.0);
-            std::vector<double> fibre2_min_point(3, 0.0);
-            std::vector<double> fibre2_max_point(3, 0.0);
-            for (int i = 0; i < 3; i++)
-            {
-                fibre1_min_point[i] = std::min(point1[i], point2[i]);
-                fibre1_max_point[i] = std::max(point1[i], point2[i]);
-                fibre2_min_point[i] = std::min(point3[i], point4[i]);
-                fibre2_max_point[i] = std::max(point3[i], point4[i]);
-            }
-
-            if (DCP1 == 0 && fibre1_min_point[0] <= point3[0] && point3[0] <= fibre1_max_point[0] && fibre1_min_point[1] <= point3[1] && point3[1] <= fibre1_max_point[1] && fibre1_min_point[2] <= point3[2] && point3[2] <= fibre1_max_point[2])
-            {
-                std::cout << " fibres cross-link in T shape" << std::endl;
-                //this->parameters.T_crosslink_count++;
-            }
-
-            if (DCP2 == 0 && fibre1_min_point[0] <= point4[0] && point4[0] <= fibre1_max_point[0] && fibre1_min_point[1] <= point4[1] && point4[1] <= fibre1_max_point[1] && fibre1_min_point[2] <= point4[2] && point4[2] <= fibre1_max_point[2])
-            {
-                std::cout << "fibres cross-link in T shape" << std::endl;
-                //this->parameters.T_crosslink_count++;
-            }
-
-            if (DCP3 == 0 && fibre2_min_point[0] <= point1[0] && point1[0] <= fibre2_max_point[0] && fibre2_min_point[1] <= point1[1] && point1[1] <= fibre2_max_point[1] && fibre2_min_point[2] <= point1[2] && point1[2] <= fibre2_max_point[2])
-            {
-                std::cout << "fibres cross-link in T shape" << std::endl;
-                //this->parameters.T_crosslink_count++;
-            }
-
-            if (DCP4 == 0 && fibre2_min_point[0] <= point2[0] && point2[0] <= fibre2_max_point[0] && fibre2_min_point[1] <= point2[1] && point2[1] <= fibre2_max_point[1] && fibre2_min_point[2] <= point2[2] && point2[2] <= fibre2_max_point[2])
-            {
-                std::cout << "fibres cross-link in T shape" << std::endl;
-                //this->parameters.T_crosslink_count++;
-            }*/
-
+        //note have moved cross-link check to separate function now
+        return;
     }
+
     else
     {
         // one last check - do nothing but spew out some warning

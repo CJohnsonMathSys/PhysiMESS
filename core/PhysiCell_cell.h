@@ -109,15 +109,18 @@ class Cell_Parameters
 
 	// necrosis parameters (may evenually be moved into a reference necrotic phenotype 
 	double max_necrosis_rate; // deprecate
-	int necrosis_type; // deprecate 
+	int necrosis_type; // deprecate
+
+    int fibredegradation=0;
 	
 	double mLength=0;
     double mRadius=0;
 
     double stuck_counter=0;
+    double unstuck_counter=0;
 
-    int X_crosslink_count=0;
-    int T_crosslink_count=0;
+    int X_crosslink_count;//=0;
+    int T_crosslink_count;//=0;
 
 	double mVelocityAdhesion = 0;
 
@@ -125,7 +128,7 @@ class Cell_Parameters
 
 	double mCellVelocityMaximum= 0;
 
-	Cell_Parameters(); 
+	Cell_Parameters();
 }; 
 
 class Cell_Definition
@@ -161,6 +164,8 @@ class Cell_State
 	double simple_pressure;
 	
 	int number_of_attached_cells( void );
+
+    std::vector<double> crosslink_point;
 	
 	Cell_State(); 
 };
@@ -180,12 +185,14 @@ class Cell : public Basic_Agent
 	Cell_Functions functions; 
 
 	Cell_State state; 
-	Phenotype phenotype; 
-	
+	Phenotype phenotype;
+
+    void force_update_motility_vector(double dt_);
 	void update_motility_vector( double dt_ );
 	void advance_bundled_phenotype_functions( double dt_ ); 
 	
 	void add_potentials(Cell*);       // Add repulsive and adhesive forces.
+    void check_fibre_crosslinks(Cell*); // for use in fibre degradation models
     void degrade_fibre(Cell*); // for use in fibre degradation models
 	void set_previous_velocity(double xV, double yV, double zV);
 	int get_current_mechanics_voxel_index();

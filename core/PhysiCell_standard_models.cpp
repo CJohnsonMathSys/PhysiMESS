@@ -577,43 +577,106 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 	pCell->state.simple_pressure = 0.0;
 	pCell->state.neighbors.clear(); // new 1.8.0
 
+    // ideally we need a separate mechanics voxel size for things to do with fibres - not sure how to make that work right now
     pCell->parameters.X_crosslink_count = 0;
     pCell->parameters.T_crosslink_count = 0;
 
-	//First check the neighbors in my current voxel
-	std::vector<Cell*>::iterator neighbor;
-	std::vector<Cell*>::iterator end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
-	for(neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); neighbor != end; ++neighbor)
+	//First check the crosslinks in my current voxel
+	std::vector<Cell*>::iterator f_neighbor;
+	std::vector<Cell*>::iterator f_end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
+	for(f_neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); f_neighbor != f_end; ++f_neighbor)
 	{
-		pCell->add_potentials(*neighbor);
+		pCell->check_fibre_crosslinks(*f_neighbor);
 	}
-	std::vector<int>::iterator neighbor_voxel_index;
-	std::vector<int>::iterator neighbor_voxel_index_end = 
+    //Then check the crosslinks in neighboring voxels
+    std::vector<int>::iterator f_neighbor_voxel_index;
+	std::vector<int>::iterator f_neighbor_voxel_index_end =
 		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].end();
-
-	for( neighbor_voxel_index = 
+	for( f_neighbor_voxel_index =
 		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].begin();
-		neighbor_voxel_index != neighbor_voxel_index_end; 
-		++neighbor_voxel_index )
+		f_neighbor_voxel_index != f_neighbor_voxel_index_end;
+		++f_neighbor_voxel_index )
 	{
-		if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[*neighbor_voxel_index].center, *neighbor_voxel_index))
+		if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[*f_neighbor_voxel_index].center, *f_neighbor_voxel_index))
 			continue;
-		end = pCell->get_container()->agent_grid[*neighbor_voxel_index].end();
-		for(neighbor = pCell->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
+		f_end = pCell->get_container()->agent_grid[*f_neighbor_voxel_index].end();
+		for(f_neighbor = pCell->get_container()->agent_grid[*f_neighbor_voxel_index].begin();f_neighbor != f_end; ++f_neighbor)
 		{
-			pCell->add_potentials(*neighbor);
+            pCell->check_fibre_crosslinks(*f_neighbor);
 		}
 	}
 
-    /*if (pCell->type_name == "fibre")
+    //First check the neighbors in my current voxel
+    std::vector<Cell*>::iterator neighbor;
+    std::vector<Cell*>::iterator end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
+    for(neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); neighbor != end; ++neighbor)
     {
-        std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " X cross-links and "
-                     << pCell->parameters.T_crosslink_count << " T cross-links " << std::endl;
+        pCell->add_potentials(*neighbor);
+    }
+    std::vector<int>::iterator neighbor_voxel_index;
+    std::vector<int>::iterator neighbor_voxel_index_end =
+            pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].end();
+
+    for( neighbor_voxel_index =
+                 pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].begin();
+         neighbor_voxel_index != neighbor_voxel_index_end;
+         ++neighbor_voxel_index )
+    {
+        if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[*neighbor_voxel_index].center, *neighbor_voxel_index))
+            continue;
+        end = pCell->get_container()->agent_grid[*neighbor_voxel_index].end();
+        for(neighbor = pCell->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
+        {
+            pCell->add_potentials(*neighbor);
+        }
+    }
+
+    /*if (pCell->type_name == "fibre" && pCell->parameters.X_crosslink_count  > 0)
+    {
+        //std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " X cross-links and "
+                     //<< pCell->parameters.T_crosslink_count << " T cross-links " << std::endl;
+        std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " cross-links "
+                  << " its crosslink location is at " << pCell->state.crosslink_point << std::endl;
     }*/
 
-	pCell->update_motility_vector(dt); 
-	pCell->velocity += phenotype.motility.motility_vector;
-	
+    int stuck_counter = 10;
+    int unstuck_counter = 50;
+
+    if (pCell->parameters.stuck_counter == stuck_counter+1){
+        std::cout << "!HELP! cell " << pCell->ID << " gets stuck at time " << PhysiCell_globals.current_time << std::endl;
+        //std::cout << "stuck counter is: " << pCell->parameters.stuck_counter << " unstuck counter is: " << pCell->parameters.unstuck_counter << std::endl;
+        pCell->parameters.stuck_counter = 0;
+        pCell->parameters.unstuck_counter = 1;
+    }
+
+    if (1 <= pCell->parameters.unstuck_counter && pCell->parameters.unstuck_counter < unstuck_counter) {
+        pCell->parameters.unstuck_counter++;
+        pCell->force_update_motility_vector(dt);
+        pCell->velocity += phenotype.motility.motility_vector;
+        /*if (pCell->type_name == "cell" ){
+            std::cout << " unstuck counter is: " << pCell->parameters.unstuck_counter << std::endl;
+            //std::cout << "   cell motility vector is: " << phenotype.motility.motility_vector << std::endl;
+            //std::cout << "   cell migration bias direction is: " <<phenotype.motility.migration_bias_direction << std::endl;
+            std::cout << "   cell is travelling in the direction: " << pCell->velocity << std::endl;
+            std::cout << std::endl;
+        }*/
+    }
+    else {
+        pCell->update_motility_vector(dt);
+        pCell->velocity += phenotype.motility.motility_vector;
+        /*if (pCell->type_name == "cell" ){
+            std::cout << "At time " << PhysiCell_globals.current_time << std::endl;
+            std::cout << "   cell motility vector is: " << phenotype.motility.motility_vector << std::endl;
+            std::cout << "   cell migration bias direction is: " <<phenotype.motility.migration_bias_direction << std::endl;
+            std::cout << "   cell is travelling in the direction: " << pCell->velocity << std::endl;
+            std::cout << std::endl;
+        }*/
+    }
+
+    if(pCell->parameters.unstuck_counter == unstuck_counter){
+        pCell->parameters.unstuck_counter = 0;
+    }
+
 	return; 
 }
 
@@ -865,15 +928,31 @@ void update_cell_and_death_parameters_O2_based( Cell* pCell, Phenotype& phenotyp
 
 void chemotaxis_function( Cell* pCell, Phenotype& phenotype , double dt )
 {
-	// bias direction is gradient for the indicated substrate 
+	// bias direction is gradient for the indicated substrate
 	phenotype.motility.migration_bias_direction = pCell->nearest_gradient(phenotype.motility.chemotaxis_index);
 	// move up or down gradient based on this direction 
 	phenotype.motility.migration_bias_direction *= phenotype.motility.chemotaxis_direction; 
 
-	// normalize 
-	normalize( &( phenotype.motility.migration_bias_direction ) );
-	
-	return;
+	// normalize
+    // normalize( &( phenotype.motility.migration_bias_direction ) );
+    double test = 0.0;
+
+    for( unsigned int i=0; i < 2; i++ )
+    { test += ( phenotype.motility.migration_bias_direction[i]*phenotype.motility.migration_bias_direction[i] ); }
+    test = sqrt( test );
+
+    for( unsigned int i=0; i < 2; i++ )
+    { phenotype.motility.migration_bias_direction[i] /= test ; }
+
+    // If the norm is small, normalizing doens't make sense.
+    // Just set the entire vector to zero.
+    if( test <= 1e-16 )
+    {
+        for( unsigned int i=0; i < 2; i++ )
+        { phenotype.motility.migration_bias_direction[i] = 0.0; }
+    }
+
+    return;
 }
 
 void standard_elastic_contact_function( Cell* pC1, Phenotype& p1, Cell* pC2, Phenotype& p2 , double dt )
