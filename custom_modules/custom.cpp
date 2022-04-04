@@ -69,6 +69,7 @@
 #include <math.h>  
 #include <chrono>
 #include <random>
+#include <string>
 
 
 void create_cell_types( void ){
@@ -144,7 +145,7 @@ void setup_tissue( void ){
 	double Ymax = microenvironment.mesh.bounding_box[4]; 
 	double Zmax = microenvironment.mesh.bounding_box[5]; 
 	
-	if( default_microenvironment_options.simulate_2D == true ){
+	if(default_microenvironment_options.simulate_2D){
 		Zmin = 0.0; 
 		Zmax = 0.0; 
 	}
@@ -154,264 +155,186 @@ void setup_tissue( void ){
 	double Zrange = Zmax - Zmin; 
 
 	// load cells from your CSV file (if enabled)
-	load_cells_from_pugixml(); 	
+	load_cells_from_pugixml();
 
-	// N.B following fibre assignment only works if fibres are considered as another cell agent (uses all_cells)
-	bool isFibreFromFile = false; // enable the manual input
-
-	unsigned fail_count=0;
+    // new fibre related parameters and bools
+	bool isFibreFromFile = false;
+    bool fibreanisotropy = parameters.bools("anisotropic_fibres");
+    double fibre_length = parameters.doubles("fibre_length");
+    double fibre_radius = parameters.doubles("fibre_radius");
+    double fibre_angle = parameters.doubles("fibre_angle");
 
 	for( int i=0; i < (*all_cells).size(); i++ ){
 
+        // initialise the following parameters for all cells regardless of type
 		(*all_cells)[i]->parameters.mCellVelocityMaximum = parameters.doubles("cell_velocity_max");
-
+        (*all_cells)[i]->parameters.mVelocityAdhesion = parameters.doubles("vel_adhesion");
+        (*all_cells)[i]->parameters.mVelocityContact = parameters.doubles("vel_contact");
         (*all_cells)[i]->parameters.fibredegradation = parameters.bools("fibre_degradation");
-
         (*all_cells)[i]->state.crosslink_point.resize(3,0.0);
 
-		if( (*all_cells)[i]->type_name == "fibre" )
-		{
-			isFibreFromFile = true;
+        const auto agentname = std::string((*all_cells)[i]->type_name);
+        const auto fibre = std::string("fibre");
+        const auto fiber = std::string("fiber");
+        const auto rod = std::string("rod");
 
-			// concerned with a fibre, position provided in CSV, test whether out of bounds
-	
-			//set fibre length as normally distributed around 75
-			//double fibreLength = NormalRandom(75.,5.);
-            double fibreLength = parameters.doubles("fibre_length");//70; //value used for testing
+        if (agentname.find(fibre) != std::string::npos ||
+            agentname.find(fiber) != std::string::npos ||
+            agentname.find(rod) != std::string::npos) {
+            /* fibre positions are given by csv
+               assign fibre orientation and test whether out of bounds */
+            isFibreFromFile = true;
 
-			// set parameters
-			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
-			(*all_cells)[i]->parameters.mRadius = parameters.doubles("fibre_radius");//2.0;
+            (*all_cells)[i]->parameters.mLength = NormalRandom(fibre_length, 0.0) / 2.0;
+            (*all_cells)[i]->parameters.mRadius = fibre_radius;
 
-			(*all_cells)[i]->parameters.mVelocityAdhesion = parameters.doubles("vel_adhesion");
-			(*all_cells)[i]->parameters.mVelocityContact = parameters.doubles("vel_contact");
-
-			//assign fibre orientation as a random vector from points on unit sphere/circle
-			(*all_cells)[i]->assign_orientation();
-            if( default_microenvironment_options.simulate_2D == true ) {
-                (*all_cells)[i]->state.orientation = UniformOnUnitCircle();
+            //assign fibre orientation as a random vector from points on unit sphere/circle
+            (*all_cells)[i]->assign_orientation();
+            if (default_microenvironment_options.simulate_2D) {
+                if (fibreanisotropy){
+                    double theta = NormalRandom(fibre_angle,0.0);
+                    (*all_cells)[i]->state.orientation[0] = cos(theta);
+                    (*all_cells)[i]->state.orientation[1] = sin(theta);
+                }
+                else{
+                    (*all_cells)[i]->state.orientation = UniformOnUnitCircle();
+                }
                 (*all_cells)[i]->state.orientation[2] = 0.0;
             }
-            else{
+            else {
                 (*all_cells)[i]->state.orientation = UniformOnUnitSphere();
             }
 
-			// start and end points of a fibre are calculated from fibre center
-			double xs = (*all_cells)[i]->position[0] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
-			double xe = (*all_cells)[i]->position[0] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
-			double ys = (*all_cells)[i]->position[1] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
-			double ye = (*all_cells)[i]->position[1] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
+            //###########################################//
+            //   this bit a hack for PacMan and maze	 //
+            //###########################################//
+            if ((*all_cells)[i]->type_name == "fibre_vertical") {
+                (*all_cells)[i]->state.orientation[0] = 0.0;
+                (*all_cells)[i]->state.orientation[1] = 1.0;
+                (*all_cells)[i]->state.orientation[2] = 0.0;
+            }
+            if ((*all_cells)[i]->type_name == "fibre_horizontal") {
+                (*all_cells)[i]->state.orientation[0] = 1.0;
+                (*all_cells)[i]->state.orientation[1] = 0.0;
+                (*all_cells)[i]->state.orientation[2] = 0.0;
+            }
+            //###########################################//
+
+            // start and end points of a fibre are calculated from fibre center
+            double xs = (*all_cells)[i]->position[0] -
+                        (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[0];
+            double xe = (*all_cells)[i]->position[0] +
+                        (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[0];
+            double ys = (*all_cells)[i]->position[1] -
+                        (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[1];
+            double ye = (*all_cells)[i]->position[1] +
+                        (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[1];
             double zs = 0.0;
             double ze = 0.0;
-            if( default_microenvironment_options.simulate_2D == true ) {
-                //std::cout << " fibre endpoints in 2D are " << xs << " " << ys << " and " << xe << " " << ye << std::endl;
+            if (default_microenvironment_options.simulate_2D) {
+                /*std::cout << " fibre endpoints in 2D are " << xs << " " << ys <<
+                               " and " << xe << " " << ye << std::endl; */
             }
-            else if( default_microenvironment_options.simulate_2D == false ) {
-                zs = (*all_cells)[i]->position[2] -
-                            (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
-                ze = (*all_cells)[i]->position[2] +
-                            (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
-                //std::cout << " fibre endpoints in 3D are " << xs << " " << ys << " " << zs << " and " << xe << " " << ye << " " << ze << std::endl;
-            }
-
-			// check whether a fibre end point leaves the domain and if so initialise fibre again
-			// assume user placed the centre of fibre within the domain so reinitialise orientation,
-            // break after 10 failures
-			while ((xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax) && fail_count<10) {
-				std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
-				(*all_cells)[i]->state.orientation[0] = UniformOnUnitCircle()[0];
-				xs = (*all_cells)[i]->position[0] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
-				xe = (*all_cells)[i]->position[0] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
-				fail_count++;
-			}
-		
-			while ((ys < Ymin || ye > Ymax || ye < Xmin || ys > Xmax) && fail_count<10) {
-				std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
-				(*all_cells)[i]->state.orientation[1] = UniformOnUnitCircle()[1];
-				ys = (*all_cells)[i]->position[1] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
-				ye = (*all_cells)[i]->position[1] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
-				fail_count++;
-			}
-
-            // the following needs re-writing properly to handle the 3D case
-            if( default_microenvironment_options.simulate_2D == false ) {
-			    while (zs < Zmin || ze > Zmax || ze < Xmin || zs > Xmax) {
-                    std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
-                }
-                (*all_cells)[i]->state.orientation[2] = UniformOnUnitSphere()[2];
-			    zs = (*all_cells)[i]->position[2] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[2];
-			    ze = (*all_cells)[i]->position[2] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[2];
-			}
-
-			if(fail_count>=10){
-				// failed to place the fibre within the domain bounds, delete fibre
-				delete_cell((*all_cells)[i]); 
-			}
-			fail_count=0;
-
-		}
-
-		//###########################################//
-		//   this bit a hack for PacMan and maze	 //
-		//###########################################//
-		else if((*all_cells)[i]->type_name == "fibre_vertical" )
-		{
-			isFibreFromFile = true;
-
-			// concerned with a fibre, position provided in CSV, test whether out of bounds
-			bool isFibreOutOfBounds = false;
-
-			//set fibre length as normally distributed around 75
-			//double fibreLength = NormalRandom(75.,5.);
-			double fibreLength = parameters.doubles("fibre_length");//70; //value used for testing
-
-			// set parameters
-			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
-            (*all_cells)[i]->parameters.mRadius = parameters.doubles("fibre_radius");//2.0;
-
-			(*all_cells)[i]->parameters.mVelocityAdhesion = parameters.doubles("vel_adhesion");
-			(*all_cells)[i]->parameters.mVelocityContact = parameters.doubles("vel_contact");
-
-			//assign fibre orientation - vertical i.e. aligned with y in xy plane
-			(*all_cells)[i]->assign_orientation();
-			(*all_cells)[i]->state.orientation[0] = 0.0;
-			(*all_cells)[i]->state.orientation[1] = 1.0;
-			(*all_cells)[i]->state.orientation[2] = 0.0;
-
-			// start and end points of a fibre are calculated from fibre center
-			double xs = (*all_cells)[i]->position[0] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
-			double xe = (*all_cells)[i]->position[0] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
-			double ys = (*all_cells)[i]->position[1] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
-			double ye = (*all_cells)[i]->position[1] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
-            double zs = 0.0;
-            double ze = 0.0;
-            if( default_microenvironment_options.simulate_2D == false ) {
-                zs = (*all_cells)[i]->position[2] -
-                            (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
-                ze = (*all_cells)[i]->position[2] +
-                            (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
-            }
-
-			// check whether a fibre end point leaves the domain and if so initialise fibre again
-			// assume user placed the centre of fibre within the domain so force delete of this fibre
-			while ( (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax) && fail_count<10) {
-				std::cout << "!!! VERTICAL fibre has a portion outside of the domain - deleting fibre !!!" << std::endl;
-				fail_count=11;
-			}
-	
-			while ((ys < Ymin || ye > Ymax || ye < Xmin || ys > Xmax) && fail_count<10) {
-				std::cout << "!!! VERTICAL fibre has a portion outside of the domain - deleting fibre !!!" << std::endl;
-				fail_count=11;
-			}
-
-            if( default_microenvironment_options.simulate_2D == false ) {
-                while (zs < Zmin || ze > Zmax || ze < Xmin || zs > Xmax) {
-                    std::cout << "!!! VERTICAL fibre has a portion outside of the domain - deleting fibre !!!" << std::endl;
-                    fail_count=11;
-                }
-            }
-
-            if(fail_count>=10){
-                // failed to place the fibre within the domain bounds, delete fibre
-                delete_cell((*all_cells)[i]);
-            }
-            fail_count=0;
-
-            // relabel so that the rest of the code works (HACK)
-            (*all_cells)[i]->type_name = "fibre";
-
-        }
-
-		else if((*all_cells)[i]->type_name == "fibre_horizontal" )
-		{
-			isFibreFromFile = true;
-
-			// concerned withe a fibre, position provided in CSV, test whether out of bounds
-			bool isFibreOutOfBounds = false;
-
-			//set fibre length as normally distributed around 75
-			//double fibreLength = NormalRandom(75.,5.);
-			double fibreLength = parameters.doubles("fibre_length");//70; //value used for testing
-
-			// set parameters
-			(*all_cells)[i]->parameters.mLength = fibreLength/2.0;
-            (*all_cells)[i]->parameters.mRadius = parameters.doubles("fibre_radius");//2.0;
-
-			(*all_cells)[i]->parameters.mVelocityAdhesion = parameters.doubles("vel_adhesion");
-			(*all_cells)[i]->parameters.mVelocityContact = parameters.doubles("vel_contact");
-
-            //assign fibre orientation - horizontal i.e. aligned with x in xy plane
-			(*all_cells)[i]->assign_orientation();
-			(*all_cells)[i]->state.orientation[0] = 1.0;
-			(*all_cells)[i]->state.orientation[1] = 0.0;
-			(*all_cells)[i]->state.orientation[2] = 0.0;
-
-			// start and end points of a fibre are calculated from fibre center
-			double xs = (*all_cells)[i]->position[0] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
-			double xe = (*all_cells)[i]->position[0] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[0];
-			double ys = (*all_cells)[i]->position[1] - (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
-			double ye = (*all_cells)[i]->position[1] + (*all_cells)[i]->parameters.mLength*(*all_cells)[i]->state.orientation[1];
-            double zs = 0.0;
-            double ze = 0.0;
-            if( default_microenvironment_options.simulate_2D == false ) {
+            else if (!default_microenvironment_options.simulate_2D) {
                 zs = (*all_cells)[i]->position[2] -
                      (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
                 ze = (*all_cells)[i]->position[2] +
                      (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
+                /*std::cout << " fibre endpoints in 3D are " << xs << " " << ys << " " << zs <<
+                               " and " << xe << " " << ye << " " << ze << std::endl; */
             }
 
-			// check whether a fibre end point leaves the domain and if so initialise fibre again
-			// assume user placed the centre of the fibre within the domain so force delete of this fibre
-			while ((xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax) && fail_count<10) {
-				std::cout << "!!! HORIZONTAL fibre has a portion outside of the domain - trying again !!!" << std::endl;
-				fail_count=11;
-			}
-			fail_count=0;
-			while ((ys < Ymin || ye > Ymax || ye < Xmin || ys > Xmax) && fail_count<10) {
-				std::cout << "!!! HORIZONTAL fibre has a portion outside of the domain - trying again !!!" << std::endl;
-				fail_count=11;
-			}
+            /* check whether a fibre end point leaves the domain and if so initialise fibre again
+                     assume user placed the centre of fibre within the domain so reinitialise orientation,
+                     break after 10 failures
+                     It needs re-writing at some stage to handle the 3D case properly */
 
-            if( default_microenvironment_options.simulate_2D == false ) {
-                while (zs < Zmin || ze > Zmax || ze < Xmin || zs > Xmax) {
-                    std::cout << "!!! HORIZONTAL fibre has a portion outside of the domain - trying again !!!"
-                              << std::endl;
-                    fail_count = 11;
+            if (fibreanisotropy) {
+                if (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax ||
+                    ys < Ymin || ye > Ymax || ye < Ymin || ys > Ymax) {
+                        (*all_cells)[i]->parameters.fail_count = 10;
+                }
+            }
+            else{
+                if (default_microenvironment_options.simulate_2D) {
+                    while ((*all_cells)[i]->parameters.fail_count < 10) {
+                        if (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax ||
+                            ys < Ymin || ye > Ymax || ye < Ymin || ys > Ymax) {
+                            (*all_cells)[i]->parameters.fail_count++;
+                            (*all_cells)[i]->state.orientation = UniformOnUnitCircle();
+                            xs = (*all_cells)[i]->position[0] -
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[0];
+                            xe = (*all_cells)[i]->position[0] +
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[0];
+                            ys = (*all_cells)[i]->position[1] -
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[1];
+                            ye = (*all_cells)[i]->position[1] +
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[1];
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                }
+
+                if (!default_microenvironment_options.simulate_2D) {
+                    while ((*all_cells)[i]->parameters.fail_count < 10) {
+                        if (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax ||
+                            ys < Ymin || ye > Ymax || ye < Ymin || ys > Ymax ||
+                            zs < Zmin || ze > Zmax || ze < Xmin || zs > Xmax) {
+                            (*all_cells)[i]->parameters.fail_count++;
+                            (*all_cells)[i]->state.orientation = UniformOnUnitSphere();
+                            xs = (*all_cells)[i]->position[0] -
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[0];
+                            xe = (*all_cells)[i]->position[0] +
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[0];
+                            ys = (*all_cells)[i]->position[1] -
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[1];
+                            ye = (*all_cells)[i]->position[1] +
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[1];
+                            zs = (*all_cells)[i]->position[2] -
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
+                            ze = (*all_cells)[i]->position[2] +
+                                 (*all_cells)[i]->parameters.mLength * (*all_cells)[i]->state.orientation[2];
+                        }
+                        else {
+                            break;
+                        }
+                    }
                 }
             }
 
-            if(fail_count>=10){
-                // failed to place the fibre within the domain bounds, delete fibre
-                delete_cell((*all_cells)[i]);
-            }
-            fail_count=0;
-
             // relabel so that the rest of the code works (HACK)
+            // or we could possibly use string find throughout code instead?!
             (*all_cells)[i]->type_name = "fibre";
 
         }
-
-		else
+        else
 		{
 			// type is a normal cell
 		}
 	}
 
-	bool isAddFibres = true; // disable the manual input in favour of csv
+    /* agents have not been added from the file but do want them
+       create some of each agent type */
 
-	if(isAddFibres && !isFibreFromFile)
-	{
-		// fibres have not been added from the file but do want fibres
-		// create some of each type of cell 
+	if(!isFibreFromFile){
 		Cell* pC;
-		
 		std::vector<double> position = {0, 0, 0};
 
 		for( int k=0; k < cell_definitions_by_index.size() ; k++ ) {
 
             Cell_Definition *pCD = cell_definitions_by_index[k];
             std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-            if (pCD->name != "fibre") {
+
+            const auto agentname = std::string(pCD->name);
+            const auto fibre = std::string("fibre");
+            const auto fiber = std::string("fiber");
+            const auto rod = std::string("rod");
+
+            if (agentname.find(fibre) == std::string::npos &&
+                agentname.find(fiber) == std::string::npos &&
+                agentname.find(rod) == std::string::npos){
                 for (int n = 0; n < parameters.ints("number_of_cells"); n++) {
 
                     position[0] = Xmin + UniformRandom() * Xrange;
@@ -421,16 +344,18 @@ void setup_tissue( void ){
                     pC = create_cell(*pCD);
 
                     pC->parameters.mCellVelocityMaximum = parameters.doubles("cell_velocity_max");
-
+                    pC->parameters.mVelocityAdhesion = parameters.doubles("vel_adhesion");
+                    pC->parameters.mVelocityContact = parameters.doubles("vel_contact");
                     pC->parameters.fibredegradation = parameters.bools("fibre_degradation");
-
                     pC->state.crosslink_point.resize(3, 0.0);
 
                     pC->assign_position(position);
                 }
             }
 
-            if(pCD->name == "fibre"){
+            if (agentname.find(fibre) != std::string::npos ||
+                agentname.find(fiber) != std::string::npos ||
+                agentname.find(rod) != std::string::npos){
                 for ( int nf = 0 ; nf < parameters.ints("number_of_fibres") ; nf++ ) {
 
                     position[0] = Xmin + UniformRandom() * Xrange;
@@ -440,26 +365,25 @@ void setup_tissue( void ){
                     pC = create_cell(*pCD);
 
                     pC->parameters.mCellVelocityMaximum = parameters.doubles("cell_velocity_max");
-
-                    pC->parameters.fibredegradation = parameters.bools("fibre_degradation");
-
-                    pC->state.crosslink_point.resize(3,0.0);
-
-                    //set fibre length as normally distributed around 75
-                    //double fibreLength = NormalRandom(75.,5.);
-                    double fibreLength = parameters.doubles("fibre_length");//70; //value used for testing
-
-                    // set parameters
-                    pC->parameters.mLength = fibreLength/2.0;
-                    pC->parameters.mRadius = parameters.doubles("fibre_radius");//2.0;
-
                     pC->parameters.mVelocityAdhesion = parameters.doubles("vel_adhesion");
                     pC->parameters.mVelocityContact = parameters.doubles("vel_contact");
+                    pC->parameters.fibredegradation = parameters.bools("fibre_degradation");
+                    pC->state.crosslink_point.resize(3,0.0);
+
+                    pC->parameters.mLength = NormalRandom(fibre_length, 0.0) / 2.0;
+                    pC->parameters.mRadius = fibre_radius;
 
                     //assign fibre orientation as a random vector from points on unit sphere/circle.
                     pC->assign_orientation();
-                    if( default_microenvironment_options.simulate_2D == true ) {
-                        pC->state.orientation = UniformOnUnitCircle();
+                    if( default_microenvironment_options.simulate_2D) {
+                        if (fibreanisotropy) {
+                            double theta = NormalRandom(fibre_angle, 0.0);
+                            pC->state.orientation[0] = cos(theta);
+                            pC->state.orientation[1] = sin(theta);
+                        }
+                        else {
+                            pC->state.orientation = UniformOnUnitCircle();
+                        }
                         pC->state.orientation[2] = 0.0;
                     }
                     else{
@@ -473,49 +397,93 @@ void setup_tissue( void ){
                     double ye = position[1] + pC->parameters.mLength*pC->state.orientation[1];
                     double zs = 0.0;
                     double ze = 0.0;
-                    if( default_microenvironment_options.simulate_2D == false ) {
+                    if( !default_microenvironment_options.simulate_2D) {
                         zs = position[2] - pC->parameters.mLength * pC->state.orientation[2];
                         ze = position[2] + pC->parameters.mLength * pC->state.orientation[2];
                     }
 
-                    // check whether a fibre end point leaves the domain and if so initialise fibre again
-                    while (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax) {
-                        std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
-                        position[0] = Xmin + UniformRandom() * Xrange;
-                        xs = position[0] - pC->parameters.mLength*pC->state.orientation[0];
-                        xe = position[0] + pC->parameters.mLength*pC->state.orientation[0];
-                    }
+                    /* check whether a fibre end point leaves the domain and if so initialise fibre again
+                     assume user placed the centre of fibre within the domain so reinitialise orientation,
+                     break after 10 failures
+                     It needs re-writing at some stage to handle the 3D case properly */
 
-                    while (ys < Ymin || ye > Ymax || ye < Xmin || ys > Xmax) {
-                        std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!" << std::endl;
-                        position[1] = Ymin + UniformRandom() * Yrange;
-                        ys = position[1] - pC->parameters.mLength*pC->state.orientation[1];
-                        ye = position[1] + pC->parameters.mLength*pC->state.orientation[1];
+                    if (fibreanisotropy) {
+                        if (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax ||
+                            ys < Ymin || ye > Ymax || ye < Ymin || ys > Ymax) {
+                            pC->parameters.fail_count = 10;
+                        }
                     }
+                    else {
+                        if (default_microenvironment_options.simulate_2D) {
+                            while (pC->parameters.fail_count < 10) {
+                                if (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax ||
+                                    ys < Ymin || ye > Ymax || ye < Ymin || ys > Ymax) {
+                                    pC->parameters.fail_count++;
+                                    pC->state.orientation = UniformOnUnitCircle();
+                                    xs = position[0] -
+                                         pC->parameters.mLength * pC->state.orientation[0];
+                                    xe = position[0] +
+                                         pC->parameters.mLength * pC->state.orientation[0];
+                                    ys = position[1] -
+                                         pC->parameters.mLength * pC->state.orientation[1];
+                                    ye = position[1] +
+                                         pC->parameters.mLength * pC->state.orientation[1];
+                                }
+                                else {
+                                    break;
+                                }
+                            }
+                        }
 
-                    if( default_microenvironment_options.simulate_2D == false ) {
-                        while (zs < Zmin || ze > Zmax || ze < Xmin || zs > Xmax) {
-                            std::cout << "!!! The fibre has a portion outside of the domain - trying again !!!"
-                                      << std::endl;
-                            position[2] = Zmin + UniformRandom() * Zrange;
-                            zs = position[2] - pC->parameters.mLength * pC->state.orientation[2];
-                            ze = position[2] + pC->parameters.mLength * pC->state.orientation[2];
+                        if (!default_microenvironment_options.simulate_2D) {
+                            while (pC->parameters.fail_count < 10) {
+                                if (xs < Xmin || xe > Xmax || xe < Xmin || xs > Xmax ||
+                                    ys < Ymin || ye > Ymax || ye < Ymin || ys > Ymax ||
+                                    zs < Zmin || ze > Zmax || ze < Zmin || zs > Zmax) {
+                                    pC->parameters.fail_count++;
+                                    pC->state.orientation = UniformOnUnitSphere();
+                                    xs = position[0] -
+                                         pC->parameters.mLength * pC->state.orientation[0];
+                                    xe = position[0] +
+                                         pC->parameters.mLength * pC->state.orientation[0];
+                                    ys = position[1] -
+                                         pC->parameters.mLength * pC->state.orientation[1];
+                                    ye = position[1] +
+                                         pC->parameters.mLength * pC->state.orientation[1];
+                                    zs = position[2] -
+                                         pC->parameters.mLength * pC->state.orientation[2];
+                                    ze = position[2] +
+                                         pC->parameters.mLength * pC->state.orientation[2];
+                                }
+                                else {
+                                    break;
+                                }
+                            }
                         }
                     }
 
                     pC->assign_position(position);
 
-                }
+                    // relabel so that the rest of the code works (HACK)
+                    pC->type_name = "fibre";
 
+                }
 			}
+
 		}
 
 	}
 
-	std::cout << std::endl;
+    int number_of_agents = (*all_cells).size();
+    for( int i=0; i < number_of_agents; i++ ){
+        if ((*all_cells)[i]->parameters.fail_count >= 10) {
+            std::cout << "I failed to place " << (*all_cells)[i]->type_name << " " <<
+                          (*all_cells)[i]->ID << " in the domain - I am deleting agent " << std::endl;
+            delete_cell((*all_cells)[i]);
+        }
+    }
 
-	
-	return; 
+    std::cout << std::endl;
 }
 
 std::vector<std::string> my_coloring_function( Cell* pCell )
@@ -525,7 +493,7 @@ void phenotype_function( Cell* pCell, Phenotype& phenotype, double dt )
 { return; }
 
 void custom_function( Cell* pCell, Phenotype& phenotype , double dt )
-{ return; } 
+{ return; }
 
 void contact_function( Cell* pMe, Phenotype& phenoMe , Cell* pOther, Phenotype& phenoOther , double dt )
-{ return; } 
+{ return; }

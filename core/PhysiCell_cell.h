@@ -111,16 +111,18 @@ class Cell_Parameters
 	double max_necrosis_rate; // deprecate
 	int necrosis_type; // deprecate
 
-    int fibredegradation=0;
-	
-	double mLength=0;
-    double mRadius=0;
+    int fibredegradation = 0;
 
-    double stuck_counter=0;
-    double unstuck_counter=0;
+	double mLength = 0;
+    double mRadius = 0;
 
-    int X_crosslink_count;//=0;
-    int T_crosslink_count;//=0;
+    int fail_count = 0;
+
+    double stuck_counter = 0;
+    double unstuck_counter = 0;
+
+    int X_crosslink_count;
+    int T_crosslink_count;
 
 	double mVelocityAdhesion = 0;
 
@@ -192,7 +194,7 @@ class Cell : public Basic_Agent
 	void advance_bundled_phenotype_functions( double dt_ ); 
 	
 	void add_potentials(Cell*);       // Add repulsive and adhesive forces.
-    void check_fibre_crosslinks(Cell*); // for use in fibre degradation models
+    void check_fibre_crosslinks(Cell*); // for use in fibre cross-link models
     void degrade_fibre(Cell*); // for use in fibre degradation models
 	void set_previous_velocity(double xV, double yV, double zV);
 	int get_current_mechanics_voxel_index();
@@ -236,8 +238,8 @@ class Cell : public Basic_Agent
 	
 	void copy_function_pointers(Cell*);
 
-    void CrossProduct(double vector_A[], double vector_B[], double C_P[]);
-    double DotProduct(double vector_A[], double vector_B[]);
+    void CrossProduct(double vector_A[], double vector_B[], double C_P[]); //vector function called in add_potentials
+    double DotProduct(double vector_A[], double vector_B[]); //vector function called in add_potentials
 
 	void update_voxel_in_container(void);
 	void copy_data(Cell *);

@@ -577,7 +577,7 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 	pCell->state.simple_pressure = 0.0;
 	pCell->state.neighbors.clear(); // new 1.8.0
 
-    // ideally we need a separate mechanics voxel size for things to do with fibres - not sure how to make that work right now
+    // Check for crosslinks
     pCell->parameters.X_crosslink_count = 0;
     pCell->parameters.T_crosslink_count = 0;
 
@@ -606,6 +606,14 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 		}
 	}
 
+    if (pCell->type_name == "fibre" && pCell->parameters.X_crosslink_count  > 0)
+    {
+        //std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " X cross-links and "
+                     //<< pCell->parameters.T_crosslink_count << " T cross-links " << std::endl;
+        std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " cross-links "
+                  << " its crosslink location is at " << pCell->state.crosslink_point << std::endl;
+    }
+
     //First check the neighbors in my current voxel
     std::vector<Cell*>::iterator neighbor;
     std::vector<Cell*>::iterator end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
@@ -631,25 +639,17 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
         }
     }
 
-    /*if (pCell->type_name == "fibre" && pCell->parameters.X_crosslink_count  > 0)
-    {
-        //std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " X cross-links and "
-                     //<< pCell->parameters.T_crosslink_count << " T cross-links " << std::endl;
-        std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " cross-links "
-                  << " its crosslink location is at " << pCell->state.crosslink_point << std::endl;
-    }*/
+    int stuck_threshold = 10;
+    int unstuck_threshold = 50;
 
-    int stuck_counter = 10;
-    int unstuck_counter = 50;
-
-    if (pCell->parameters.stuck_counter == stuck_counter+1){
+    if (pCell->parameters.stuck_counter == stuck_threshold){
         std::cout << "!HELP! cell " << pCell->ID << " gets stuck at time " << PhysiCell_globals.current_time << std::endl;
         //std::cout << "stuck counter is: " << pCell->parameters.stuck_counter << " unstuck counter is: " << pCell->parameters.unstuck_counter << std::endl;
         pCell->parameters.stuck_counter = 0;
         pCell->parameters.unstuck_counter = 1;
     }
 
-    if (1 <= pCell->parameters.unstuck_counter && pCell->parameters.unstuck_counter < unstuck_counter) {
+    if (1 <= pCell->parameters.unstuck_counter && pCell->parameters.unstuck_counter < unstuck_threshold) {
         pCell->parameters.unstuck_counter++;
         pCell->force_update_motility_vector(dt);
         pCell->velocity += phenotype.motility.motility_vector;
@@ -673,7 +673,7 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
         }*/
     }
 
-    if(pCell->parameters.unstuck_counter == unstuck_counter){
+    if(pCell->parameters.unstuck_counter == unstuck_threshold){
         pCell->parameters.unstuck_counter = 0;
     }
 

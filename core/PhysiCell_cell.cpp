@@ -1269,12 +1269,12 @@ void Cell::add_potentials(Cell* other_agent)
             //naxpy(&velocity, fibre_repulsion, phenotype.motility.motility_vector);
             naxpy(&velocity, fibre_repulsion, previous_velocity);
 
-            int stuck_counter = 10;
-            if (this->parameters.stuck_counter > stuck_counter) {
+            int stuck_threshold = 10;
+            if (this->parameters.stuck_counter >= stuck_threshold) {
                 //std::cout << "Cell " << this->ID << " is stuck at time " << PhysiCell_globals.current_time << " will attempt to degrade fibre " << std::endl;
                 double rand_degradation = UniformRandom();
                 double prob_degradation = 0.1;
-                if (this->parameters.fibredegradation == 1 && rand_degradation < prob_degradation) {
+                if (this->parameters.fibredegradation == 1 && rand_degradation <= prob_degradation) {
                     this->degrade_fibre(other_agent);
                 }
             }
@@ -1291,7 +1291,7 @@ void Cell::add_potentials(Cell* other_agent)
          */
         if (this->parameters.X_crosslink_count < 1) {
             // currently this is just a hack to say that fibres are not affected by any attractant cells
-            if (other_agent->type_name == "attractant"){
+            if (other_agent->phenotype.motility.is_motile == false){
                 return;
             }
 
