@@ -522,8 +522,6 @@ void Cell::assign_orientation()
 	return; 
 }
 
-
-
 Cell* Cell::divide( )
 {
 	// phenotype.flagged_for_division = false; 
@@ -913,15 +911,17 @@ void Cell::copy_function_pointers(Cell* copy_me)
 	return; 
 }
 
-void Cell::CrossProduct(double vector_A[], double vector_B[], double C_P[])
+std::vector<double> Cell::CrossProduct(std::vector<double> vector_A,
+                                       std::vector<double> vector_B,
+                                       std::vector<double>& C_P)
 {
     C_P[0] = vector_A[1] * vector_B[2] - vector_A[2] * vector_B[1];
     C_P[1] = -(vector_A[0] * vector_B[2] - vector_A[2] * vector_B[0]);
     C_P[2] = vector_A[0] * vector_B[1] - vector_A[1] * vector_B[0];
-    return;
+    return C_P;
 }
 
-double Cell::DotProduct(double vector_A[], double vector_B[])
+double Cell::DotProduct(std::vector<double> vector_A, std::vector<double> vector_B)
 {
     double dotproduct = 0;
     for (int i = 0; i < 3; i++){
@@ -959,70 +959,183 @@ void Cell::degrade_fibre(Cell* fibre_to_degrade )
     return;
 }
 
+std::vector<double> Cell::nearest_point_on_fibre(std::vector<double> point, Cell* other_agent,
+                                                 std::vector<double>& displacement){
+
+    double fibre_length = 2*(*other_agent).parameters.mLength;
+    // vector pointing from start endpoint of "other_agent" to "point"
+    std::vector<double> fibre_to_agent (3, 0.0);
+    // |fibre_to_agent| squared
+    double fibre_to_agent_length_squared = 0;
+    // scalar product fibre_to_agent * fibre_vector
+    double fibre_to_agent_dot_fibre_vector =0;
+
+    double distance = 0;
+    for (unsigned int i=0; i<3; i++) {
+        fibre_to_agent[i] = point[i]-((*other_agent).position[i]
+                -(*other_agent).parameters.mLength*(*other_agent).state.orientation[i]);
+        fibre_to_agent_length_squared += fibre_to_agent[i]*fibre_to_agent[i];
+        fibre_to_agent_dot_fibre_vector += fibre_to_agent[i]*fibre_length*(*other_agent).state.orientation[i];
+    }
+
+    if (fibre_to_agent_dot_fibre_vector < 0.)
+    {
+        for( int i = 0 ; i < 3 ; i++ )
+        {
+            displacement[i] = fibre_to_agent[i];
+            //distance += displacement[i] * displacement[i];
+        }
+        //distance = std::max(sqrt(distance), 0.00001);
+        /*std::cout << " the cell is closest to the start of the fibre"
+                    << " - the distance is " << distance << std::endl;
+          std::cout << " displacement vector is " << displacement[0] << " " << displacement[1]
+                    << " " <<displacement[2] << std::endl; */
+    }
+    else if (fibre_to_agent_dot_fibre_vector > fibre_length*fibre_length)
+    {
+        for (unsigned int i=0; i<3; i++) {
+            displacement[i] = point[i]-((*other_agent).position[i]
+                    +(*other_agent).parameters.mLength*(*other_agent).state.orientation[i]);
+            //distance += displacement[i] * displacement[i];
+        }
+        //distance = std::max(sqrt(distance), 0.00001);
+        /*std::cout << " the cell is closest to the end of the fibre"
+                    << " - the distance is " << distance << std::endl;
+          std::cout << " displacement vector is " << displacement[0] << " " << displacement[1]
+                    << " " <<displacement[2] << std::endl; */
+    }
+    else
+    {
+        double fibre_to_agent_length_cos_alpha_squared =
+                fibre_to_agent_dot_fibre_vector*fibre_to_agent_dot_fibre_vector/
+                     (fibre_length*fibre_length);
+        double l = sqrt(fibre_to_agent_length_cos_alpha_squared);
+        for (unsigned int i=0; i<3; i++) {
+            displacement[i] = fibre_to_agent[i]-l*(*other_agent).state.orientation[i];
+            //distance += displacement[i] * displacement[i];
+        }
+        //distance = std::max(sqrt(distance), 0.00001);
+        /*std::cout << " the point is closest to a point along the fibre"
+                    << " - the distance is " << distance << std::endl;
+          std::cout << " displacement vector is " << displacement[0] << " " << displacement[1]
+                    << " " <<displacement[2] << std::endl;*/
+    }
+
+    return displacement;
+}
+
+/* this function applies to a pair of fibres
+   - it determines whether fibres crosslink*/
 void Cell::check_fibre_crosslinks(Cell* fibre_neighbor){
 
     if( this == fibre_neighbor)
     { return; }
 
-    // this function just acts between a pair of fibres - it determines whether fibres cross-link
     if(this->type_name == "fibre" && (*fibre_neighbor).type_name == "fibre") {
 
         // fibre endpoints
-        double point1[3];
-        double point2[3];
-        double point3[3];
-        double point4[3];
+        std::vector<double> point1(3,0.0);
+        std::vector<double> point2(3,0.0);
+        std::vector<double> point3(3,0.0);
+        std::vector<double> point4(3,0.0);
         for (int i = 0; i < 3; i++) {
             // endpoints of "this" fibre
-            point1[i] = this->position[i] - this->parameters.mLength * this->state.orientation[i];
-            point2[i] = this->position[i] + this->parameters.mLength * this->state.orientation[i];
+            point1[i] = this->position[i]
+                    - this->parameters.mLength * this->state.orientation[i];
+            point2[i] = this->position[i]
+                    + this->parameters.mLength * this->state.orientation[i];
             // endpoints of "neighbor" fibre
-            point3[i] = (*fibre_neighbor).position[i] - this->parameters.mLength * (*fibre_neighbor).state.orientation[i];
-            point4[i] = (*fibre_neighbor).position[i] + this->parameters.mLength * (*fibre_neighbor).state.orientation[i];
+            point3[i] = (*fibre_neighbor).position[i]
+                    - this->parameters.mLength * (*fibre_neighbor).state.orientation[i];
+            point4[i] = (*fibre_neighbor).position[i]
+                    + this->parameters.mLength * (*fibre_neighbor).state.orientation[i];
         }
 
         //vectors between fibre endpoints
-        double p1_to_p2[3];
-        double p3_to_p4[3];
-        double p1_to_p3[3];
+        std::vector<double> p1_to_p2(3,0.0);
+        std::vector<double> p3_to_p4(3,0.0);
+        std::vector<double> p1_to_p3(3,0.0);
+        std::vector<double> centre_to_centre(3,0.0);
         for (int i = 0; i < 3; i++) {
+            // "this" fibre vector
             p1_to_p2[i] = point2[i] - point1[i];
+            // "neighbor" fibre vector
             p3_to_p4[i] = point4[i] - point3[i];
+            // vector from "this" to "neighbor"
             p1_to_p3[i] = point3[i] - point1[i];
+            // vector between fibre centres
+            centre_to_centre[i] = (*fibre_neighbor).position[i] - this->position[i];
         }
 
-        //cross product of fibre vector
-        double FCP[3];
+        double co_radius = this->parameters.mRadius + (*fibre_neighbor).parameters.mRadius;
+        double co_length = this->parameters.mLength + (*fibre_neighbor).parameters.mLength;
+        std::vector<double> zero(3,0.0);
+        double distance = dist(zero, centre_to_centre);
+        normalize(&centre_to_centre);
+
+        /* test if fibres intersect
+           (1) if fibres are coplanar and parallel:
+               the cross product of the two fibre vectors is zero
+               [(P2 - P1) x (P4 - P3)].[(P2 - P1) x (P4 - P3)] = 0 */
+        std::vector<double> FCP(3,0.0);
         CrossProduct(p1_to_p2, p3_to_p4, FCP);
-        // test if fibres intersect
-        // if fibres are coplanar and parallel test1 = 0
         double test1 = DotProduct(FCP,FCP);
-        // if fibres are skew test2 != 0
-        // note we include a tolerance on test2 to allow for fibre radius
-        // NEED TO DECIDE ON THIS TOLERANCE - is it actually the fibre radius
-        double test2_tolerance = this->parameters.mRadius;//0.1;
+        /* parallel fibres could intersect if approximately colinear
+           we need to take into account the radius of fibres */
+        if (test1 <= 1e-16){
+            if ((centre_to_centre == this->state.orientation ||
+                centre_to_centre == -1.0*this->state.orientation ) &&
+                distance <= co_length) {
+                this->parameters.X_crosslink_count++;
+                this->state.crosslink_point = this->position
+                        + this->parameters.mLength * centre_to_centre;
+            }
+            std::vector<double> displacement(3,0.0);
+            nearest_point_on_fibre(point1, fibre_neighbor, displacement);
+            double test_point1 = dist(zero, displacement);
+            nearest_point_on_fibre(point2, fibre_neighbor, displacement);
+            double test_point2 = dist(zero, displacement);
+            if (test_point1 <= co_radius &&
+                centre_to_centre != this->state.orientation &&
+                centre_to_centre != -1.0*this->state.orientation ){
+                this->parameters.X_crosslink_count++;
+                this->state.crosslink_point= point1;
+            }
+            if (test_point2 <= co_radius &&
+                centre_to_centre != this->state.orientation &&
+                centre_to_centre != -1.0*this->state.orientation){
+                this->parameters.X_crosslink_count++;
+                this->state.crosslink_point = point2;
+            }
+        }
+        /*  (2) if fibres are skew (in parallel planes):
+                the scalar triple product (P3 - P1) . [(P2 - P1) x (P4 - P3)] != 0
+                we include a tolerance on this to allow for fibre radius */
+        double test2_tolerance = co_radius;
         double test2 = DotProduct(p1_to_p3,FCP);
-        if (test1 != 0 && abs(test2) < test2_tolerance) {
-            // calculate the required coefficients (including dot products):
-            double a = DotProduct(p1_to_p2, p1_to_p3) / DotProduct(p1_to_p2, p1_to_p2);
-            double b = DotProduct(p1_to_p2, p3_to_p4) / DotProduct(p1_to_p2, p1_to_p2);
-            // form relevant additional vectors
-            double c[3];
-            double n[3];
+        /*  For fibres to intersect neither (1) not (2) must be true
+            and the "t" values for both line equations must lie in [0,1]
+            again we include a tolerance to allow for fibre radius */
+        if (test1 >= 1e-16 && std::abs(test2) < test2_tolerance) {
+            double a = DotProduct(p1_to_p2, p1_to_p3)
+                    / DotProduct(p1_to_p2, p1_to_p2);
+            double b = DotProduct(p1_to_p2, p3_to_p4)
+                    / DotProduct(p1_to_p2, p1_to_p2);
+            std::vector<double> c(3,0.0);
+            std::vector<double> n(3,0.0);
             for (int i = 0; i < 3; i++) {
                 c[i] = b * p1_to_p2[i] - p3_to_p4[i];
                 n[i] = p1_to_p3[i] - a * p1_to_p2[i];
             }
-            // calculate the t values for each fibre
-            double tq = DotProduct(c, n) / DotProduct(c, c);
-            double tp = a + b * tq;
-
-            // if the t values for the line extensions of fibres are both in [0,1] fibres intersect
-            // note we include a tolerance on to allow for fibre radius - NEED TO CHECK THIS WHEN FIBRES HAVE DIFFERENT LENGTHS
-            double tolerance = this->parameters.mRadius/(2*this->parameters.mLength);
+            double t_neighbor = DotProduct(c, n)
+                    / DotProduct(c, c);
+            double t_this = a + b * t_neighbor;
+            double tolerance = (*fibre_neighbor).parameters.mRadius
+                    /(2*this->parameters.mLength);
             double lower_bound = 0.0 - tolerance;
             double upper_bound = 1.0 + tolerance;
-            if (lower_bound <= tq && tq <= upper_bound && lower_bound <= tp && tp <= upper_bound) {
+            if (lower_bound <= t_neighbor && t_neighbor <= upper_bound &&
+                lower_bound <= t_this && t_this <= upper_bound) {
                 this->parameters.X_crosslink_count++;
                 /*if (0 < tq && tq < 1 && 0 < tp && tp < 1) {
                     std::cout << "fibre " << this->ID << " crosslinks in an X shape with fibre " <<  (*fibre_neighbor).ID << std::endl;
@@ -1032,7 +1145,8 @@ void Cell::check_fibre_crosslinks(Cell* fibre_neighbor){
                     std::cout << "fibre " << this->ID << " crosslinks in a T shape with fibre " <<  (*fibre_neighbor).ID << std::endl;
                 }*/
                 for (int index = 0; index < 3; index++){
-                    this->state.crosslink_point[index] = point1[index] + tp*p1_to_p2[index];
+                    this->state.crosslink_point[index] = point1[index]
+                            + t_this*p1_to_p2[index];
                 }
             }
         }
@@ -1040,8 +1154,6 @@ void Cell::check_fibre_crosslinks(Cell* fibre_neighbor){
 
     else
     { return; }
-
-    return;
 }
 
 void Cell::add_potentials(Cell* other_agent)
@@ -1140,64 +1252,13 @@ void Cell::add_potentials(Cell* other_agent)
     else if(this->type_name != "fibre" && (*other_agent).type_name == "fibre")
     {
         //std::cout << "cell agent interacting with fibre agent" << std::endl;
-
-        double fibre_length = 2*(*other_agent).parameters.mLength;
-        std::vector<double> fibre_to_cell (3, 0.0); // vector pointing from fibre_start to cell
-        double fibre_to_cell_length_squared = 0; // |fibre_to_cell| squared
-        double fibre_to_cell_dot_fibre_vector =0; // scalar product fibre_to_cell * fibre_vector
-
-        double distance = 0;
-        for (unsigned int i=0; i<3; i++) {
-            fibre_to_cell[i] = this->position[i]-((*other_agent).position[i]
-                    -(*other_agent).parameters.mLength*(*other_agent).state.orientation[i]);
-            fibre_to_cell_length_squared += fibre_to_cell[i]*fibre_to_cell[i];
-            fibre_to_cell_dot_fibre_vector += fibre_to_cell[i]*fibre_length*(*other_agent).state.orientation[i];
+        std::vector<double> displacement(3,0.0);
+        double distance = 0.0;
+        nearest_point_on_fibre(this->position, other_agent, displacement);
+        for (int index = 0; index < 3; index++){
+            distance += displacement[index]*displacement[index];
         }
-
-        if (fibre_to_cell_dot_fibre_vector < 0.)
-        {
-            for( int i = 0 ; i < 3 ; i++ )
-            {
-                displacement[i] = fibre_to_cell[i];
-                distance += displacement[i] * displacement[i];
-            }
-            // as per PhysiCell we ensure the distance is not set to 0
-            distance = std::max(sqrt(distance), 0.00001);
-            /*std::cout << " the cell is closest to the start of the fibre"
-                    << " - the distance is " << distance << std::endl;
-            std::cout << " displacement vector is " << displacement[0] << " " << displacement[1] << " " <<displacement[2] << std::endl;
-             */
-        }
-        else if (fibre_to_cell_dot_fibre_vector > fibre_length*fibre_length)
-        {
-            for (unsigned int i=0; i<3; i++) {
-                displacement[i] = (this->position[i]-((*other_agent).position[i]
-                           +(*other_agent).parameters.mLength*(*other_agent).state.orientation[i]));
-                distance += displacement[i] * displacement[i];
-            }
-            // as per PhysiCell we ensure the distance is not set to 0
-            distance = std::max(sqrt(distance), 0.00001);
-            /*std::cout << " the cell is closest to the end of the fibre"
-                    << " - the distance is " << distance << std::endl;
-            std::cout << " displacement vector is " << displacement[0] << " " << displacement[1] << " " <<displacement[2] << std::endl;
-             */
-        }
-        else
-        {
-            double fibre_to_cell_length_cos_alpha_squared = fibre_to_cell_dot_fibre_vector*fibre_to_cell_dot_fibre_vector/
-                                               (fibre_length*fibre_length);
-            double l = sqrt(fibre_to_cell_length_cos_alpha_squared);
-            for (unsigned int i=0; i<3; i++) {
-                displacement[i] = fibre_to_cell[i]-l*(*other_agent).state.orientation[i];
-                distance += displacement[i] * displacement[i];
-            }
-            // as per PhysiCell we ensure the distance is not set to 0
-            distance = std::max(sqrt(distance), 0.00001);
-            /*std::cout << " the cell is closest to a point along the fibre"
-                    << " - the distance is " << distance << std::endl;
-            std::cout << " displacement vector is " << displacement[0] << " " << displacement[1] << " " <<displacement[2] << std::endl;
-             */
-        }
+        distance = std::max(sqrt(distance), 0.00001);
 
         // as per PhysiCell
         static double simple_pressure_scale = 0.027288820670331;
@@ -2986,9 +3047,6 @@ std::vector<Cell*> find_nearby_interacting_cells( Cell* pCell )
 	
 	return neighbors; 
 }
-
-
-
 
 
 };

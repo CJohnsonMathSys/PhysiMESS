@@ -196,6 +196,7 @@ class Cell : public Basic_Agent
 	void add_potentials(Cell*);       // Add repulsive and adhesive forces.
     void check_fibre_crosslinks(Cell*); // for use in fibre cross-link models
     void degrade_fibre(Cell*); // for use in fibre degradation models
+    std::vector<double> nearest_point_on_fibre(std::vector<double> point, Cell* , std::vector<double>& displacement); // for use in fibre degradation models
 	void set_previous_velocity(double xV, double yV, double zV);
 	int get_current_mechanics_voxel_index();
 	void turn_off_reactions(double); 		  // Turn off all the reactions of the cell
@@ -238,8 +239,8 @@ class Cell : public Basic_Agent
 	
 	void copy_function_pointers(Cell*);
 
-    void CrossProduct(double vector_A[], double vector_B[], double C_P[]); //vector function called in add_potentials
-    double DotProduct(double vector_A[], double vector_B[]); //vector function called in add_potentials
+    std::vector<double> CrossProduct(std::vector<double> vector_A, std::vector<double> vector_B, std::vector<double>& C_P); //vector function called in add_potentials
+    double DotProduct(std::vector<double> vector_A, std::vector<double> vector_B); //vector function called in add_potentials
 
 	void update_voxel_in_container(void);
 	void copy_data(Cell *);

@@ -583,7 +583,7 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 
 	//First check the crosslinks in my current voxel
 	std::vector<Cell*>::iterator f_neighbor;
-	std::vector<Cell*>::iterator f_end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
+	std::vector<Cell*>::iterator f_end =pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
 	for(f_neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); f_neighbor != f_end; ++f_neighbor)
 	{
 		pCell->check_fibre_crosslinks(*f_neighbor);
@@ -608,10 +608,10 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 
     if (pCell->type_name == "fibre" && pCell->parameters.X_crosslink_count  > 0)
     {
-        //std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " X cross-links and "
-                     //<< pCell->parameters.T_crosslink_count << " T cross-links " << std::endl;
-        std::cout << " fibre " << pCell->ID <<  " has " << pCell->parameters.X_crosslink_count  << " cross-links "
-                  << " its crosslink location is at " << pCell->state.crosslink_point << std::endl;
+        std::cout << " fibre " << pCell->ID <<  " has "
+                  << pCell->parameters.X_crosslink_count  << " cross-links "
+                  << " its crosslink location is at " << pCell->state.crosslink_point
+                  << std::endl;
     }
 
     //First check the neighbors in my current voxel
