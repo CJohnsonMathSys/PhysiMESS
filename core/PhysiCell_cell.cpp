@@ -228,15 +228,12 @@ Cell_State::Cell_State()
 
 void Cell::update_motility_vector( double dt_ )
 {
-	if( phenotype.motility.is_motile == false )
-	{
+	if( !phenotype.motility.is_motile ){
 		phenotype.motility.motility_vector.assign( 3, 0.0 ); 
 		return; 
 	}
 
-    // As per PhysiCell we update the motility based on persistence time
-	if( UniformRandom() < dt_ / phenotype.motility.persistence_time || phenotype.motility.persistence_time < dt_ )
-	{
+    if( UniformRandom() < dt_ / phenotype.motility.persistence_time || phenotype.motility.persistence_time < dt_ ){
 		// choose a uniformly random unit vector 
 		double temp_angle = 6.28318530717959*UniformRandom();
 		double temp_phi = 3.1415926535897932384626433832795*UniformRandom();
@@ -244,7 +241,7 @@ void Cell::update_motility_vector( double dt_ )
 		double sin_phi = sin(temp_phi);
 		double cos_phi = cos(temp_phi);
 		
-		if( phenotype.motility.restrict_to_2D == true )
+		if( phenotype.motility.restrict_to_2D  )
 		{ 
 			sin_phi = 1.0; 
 			cos_phi = 0.0;
@@ -258,8 +255,7 @@ void Cell::update_motility_vector( double dt_ )
 		randvec[2] = cos_phi; //  cos(phi)
 
 		// if the update_bias_vector function is set, use it  
-		if( functions.update_migration_bias )
-		{
+		if( functions.update_migration_bias ){
             functions.update_migration_bias( this,phenotype,dt_ );
 		}
 		
@@ -280,7 +276,7 @@ void Cell::update_motility_vector( double dt_ )
 
 void Cell::force_update_motility_vector( double dt_ )
 {
-    if (phenotype.motility.is_motile == false) {
+    if (!phenotype.motility.is_motile) {
         phenotype.motility.motility_vector.assign(3, 0.0);
         return;
     }
@@ -293,7 +289,7 @@ void Cell::force_update_motility_vector( double dt_ )
     double sin_phi = sin(temp_phi);
     double cos_phi = cos(temp_phi);
 
-    if (phenotype.motility.restrict_to_2D == true) {
+    if (phenotype.motility.restrict_to_2D) {
         sin_phi = 1.0;
         cos_phi = 0.0;
     }
@@ -306,9 +302,9 @@ void Cell::force_update_motility_vector( double dt_ )
     randvec[2] = cos_phi; //  cos(phi)
 
     // if the update_bias_vector function is set, use it
-    if (functions.update_migration_bias) {
+    /*if (functions.update_migration_bias) {
        functions.update_migration_bias(this, phenotype, dt_);
-    }
+    }*/
 
     //phenotype.motility.motility_vector *= -1.0;//phenotype.motility.migration_bias_direction; // motiltiy = bias_vector
     //phenotype.motility.motility_vector *= phenotype.motility.migration_bias; // motility = bias*bias_vector
@@ -803,7 +799,7 @@ void Cell::update_position( double dt )
 	static double d1; 
 	static double d2; 
 	static bool constants_defined = false; 
-	if( constants_defined == false )
+	if(!constants_defined)
 	{
 		d1 = dt; 
 		d1 *= 1.5; 
@@ -813,19 +809,28 @@ void Cell::update_position( double dt )
 	}
 	
 	// new August 2017
-	if( default_microenvironment_options.simulate_2D == true )
+	if( default_microenvironment_options.simulate_2D)
 	{ velocity[2] = 0.0; }
 
 	std::vector<double> old_position(position);
     axpy( &position , d1 , velocity );
 	axpy( &position , d2 , previous_velocity );
-	// overwrite previous_velocity for future use 
-	// if(sqrt(dist(old_position, position))>3* phenotype.geometry.radius)
-		// std::cout<<sqrt(dist(old_position, position))<<"old_position: "<<old_position<<", new position: "<< position<<", velocity: "<<velocity<<", previous_velocity: "<< previous_velocity<<std::endl;
-    double movement_threshold = 0.05;
-    if  (this->type_name != "fibre" && phenotype.motility.is_motile == true  && dist(old_position, position) < movement_threshold){
-        this->parameters.stuck_counter++;
+
+	double movement_threshold = 0.05;
+    if  (this->type_name != "fibre" && phenotype.motility.is_motile)
+    {
+         if (dist(old_position, position) < movement_threshold) {
+             this->parameters.stuck_counter++;
+             /*std::cout << "stuck counter is " << this->parameters.stuck_counter
+                       << " at time " << PhysiCell_globals.current_time << std::endl;*/
+         }
+        else {
+             this->parameters.stuck_counter = 0;
+         }
     }
+
+
+    // overwrite previous_velocity for future use
 	previous_velocity = velocity;
 	
 	velocity[0]=0; velocity[1]=0; velocity[2]=0;
@@ -959,51 +964,43 @@ void Cell::degrade_fibre(Cell* fibre_to_degrade )
     return;
 }
 
-std::vector<double> Cell::nearest_point_on_fibre(std::vector<double> point, Cell* other_agent,
+std::vector<double> Cell::nearest_point_on_fibre(std::vector<double> point, Cell* fibre_agent,
                                                  std::vector<double>& displacement){
 
-    double fibre_length = 2*(*other_agent).parameters.mLength;
-    // vector pointing from start endpoint of "other_agent" to "point"
+    // don't bother if the "fibre_agent" is not a fibre
+    if( (*fibre_agent).type_name != "fibre")
+    { return displacement; }
+
+   double fibre_length = 2*(*fibre_agent).parameters.mLength;
+    // vector pointing from one endpoint of "fibre_agent" to "point"
     std::vector<double> fibre_to_agent (3, 0.0);
     // |fibre_to_agent| squared
     double fibre_to_agent_length_squared = 0;
     // scalar product fibre_to_agent * fibre_vector
-    double fibre_to_agent_dot_fibre_vector =0;
+    double fibre_to_agent_dot_fibre_vector = 0;
 
     double distance = 0;
     for (unsigned int i=0; i<3; i++) {
-        fibre_to_agent[i] = point[i]-((*other_agent).position[i]
-                -(*other_agent).parameters.mLength*(*other_agent).state.orientation[i]);
+        fibre_to_agent[i] = point[i]-((*fibre_agent).position[i]
+                -(*fibre_agent).parameters.mLength*(*fibre_agent).state.orientation[i]);
         fibre_to_agent_length_squared += fibre_to_agent[i]*fibre_to_agent[i];
-        fibre_to_agent_dot_fibre_vector += fibre_to_agent[i]*fibre_length*(*other_agent).state.orientation[i];
+        fibre_to_agent_dot_fibre_vector += fibre_to_agent[i]*fibre_length*(*fibre_agent).state.orientation[i];
     }
 
-    if (fibre_to_agent_dot_fibre_vector < 0.)
-    {
-        for( int i = 0 ; i < 3 ; i++ )
-        {
+    // "point" is closest to the selected endpoint of "fibre_agent"
+    if (fibre_to_agent_dot_fibre_vector < 0.){
+        for( int i = 0 ; i < 3 ; i++ ){
             displacement[i] = fibre_to_agent[i];
-            //distance += displacement[i] * displacement[i];
         }
-        //distance = std::max(sqrt(distance), 0.00001);
-        /*std::cout << " the cell is closest to the start of the fibre"
-                    << " - the distance is " << distance << std::endl;
-          std::cout << " displacement vector is " << displacement[0] << " " << displacement[1]
-                    << " " <<displacement[2] << std::endl; */
     }
-    else if (fibre_to_agent_dot_fibre_vector > fibre_length*fibre_length)
-    {
-        for (unsigned int i=0; i<3; i++) {
-            displacement[i] = point[i]-((*other_agent).position[i]
-                    +(*other_agent).parameters.mLength*(*other_agent).state.orientation[i]);
-            //distance += displacement[i] * displacement[i];
+    // “point” is closest to the other endpoint of “fibre_agent”
+    else if (fibre_to_agent_dot_fibre_vector > fibre_length*fibre_length) {
+        for (unsigned int i = 0; i < 3; i++) {
+            displacement[i] = point[i] - ((*fibre_agent).position[i]
+                                          + (*fibre_agent).parameters.mLength * (*fibre_agent).state.orientation[i]);
         }
-        //distance = std::max(sqrt(distance), 0.00001);
-        /*std::cout << " the cell is closest to the end of the fibre"
-                    << " - the distance is " << distance << std::endl;
-          std::cout << " displacement vector is " << displacement[0] << " " << displacement[1]
-                    << " " <<displacement[2] << std::endl; */
     }
+    // “point” is closest to a point along “fibre_agent”
     else
     {
         double fibre_to_agent_length_cos_alpha_squared =
@@ -1011,16 +1008,11 @@ std::vector<double> Cell::nearest_point_on_fibre(std::vector<double> point, Cell
                      (fibre_length*fibre_length);
         double l = sqrt(fibre_to_agent_length_cos_alpha_squared);
         for (unsigned int i=0; i<3; i++) {
-            displacement[i] = fibre_to_agent[i]-l*(*other_agent).state.orientation[i];
-            //distance += displacement[i] * displacement[i];
+            displacement[i] = fibre_to_agent[i]-l*(*fibre_agent).state.orientation[i];
         }
-        //distance = std::max(sqrt(distance), 0.00001);
-        /*std::cout << " the point is closest to a point along the fibre"
-                    << " - the distance is " << distance << std::endl;
-          std::cout << " displacement vector is " << displacement[0] << " " << displacement[1]
-                    << " " <<displacement[2] << std::endl;*/
     }
 
+    // the function returns the displacement vector
     return displacement;
 }
 
@@ -1249,11 +1241,11 @@ void Cell::add_potentials(Cell* other_agent)
 
     }
 
-    else if(this->type_name != "fibre" && (*other_agent).type_name == "fibre")
-    {
+    else if(this->type_name != "fibre" && (*other_agent).type_name == "fibre"){
         //std::cout << "cell agent interacting with fibre agent" << std::endl;
         std::vector<double> displacement(3,0.0);
         double distance = 0.0;
+        std::cout << " determining distance from cell " << this->ID << " to fibre " << (*other_agent).ID << std::endl;
         nearest_point_on_fibre(this->position, other_agent, displacement);
         for (int index = 0; index < 3; index++){
             distance += displacement[index]*displacement[index];
@@ -1332,11 +1324,17 @@ void Cell::add_potentials(Cell* other_agent)
 
             int stuck_threshold = 10;
             if (this->parameters.stuck_counter >= stuck_threshold) {
-                //std::cout << "Cell " << this->ID << " is stuck at time " << PhysiCell_globals.current_time << " will attempt to degrade fibre " << std::endl;
+                /*std::cout << "Cell " << this->ID << " is stuck at time "
+                          << PhysiCell_globals.current_time
+                          << " near fibre " << (*other_agent).ID  << std::endl;*/
                 double rand_degradation = UniformRandom();
                 double prob_degradation = 0.1;
-                if (this->parameters.fibredegradation == 1 && rand_degradation <= prob_degradation) {
+                if (this->parameters.fibredegradation &&
+                    rand_degradation <= prob_degradation) {
+                    /*std::cout << " --> fibre is degraded " << std::endl;
+                    std::cout << std::endl;*/
                     this->degrade_fibre(other_agent);
+                    this->parameters.stuck_counter = 0;
                 }
             }
         }
@@ -1350,9 +1348,9 @@ void Cell::add_potentials(Cell* other_agent)
         /* note fibres get pushed by cells if they have no crosslinks
          * we intend to update this to be that fibres with one cross link pivot at the crosslink location
          */
-        if (this->parameters.X_crosslink_count < 1) {
+        if (this->parameters.X_crosslink_count < 0) {
             // currently this is just a hack to say that fibres are not affected by any attractant cells
-            if (other_agent->phenotype.motility.is_motile == false){
+            if (!other_agent->phenotype.motility.is_motile){
                 return;
             }
 

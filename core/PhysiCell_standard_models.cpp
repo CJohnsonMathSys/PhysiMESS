@@ -606,13 +606,13 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 		}
 	}
 
-    if (pCell->type_name == "fibre" && pCell->parameters.X_crosslink_count  > 0)
+    /*if (pCell->type_name == "fibre" && pCell->parameters.X_crosslink_count  > 0)
     {
         std::cout << " fibre " << pCell->ID <<  " has "
                   << pCell->parameters.X_crosslink_count  << " cross-links "
                   << " its crosslink location is at " << pCell->state.crosslink_point
                   << std::endl;
-    }
+    }*/
 
     //First check the neighbors in my current voxel
     std::vector<Cell*>::iterator neighbor;
@@ -640,40 +640,29 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
     }
 
     int stuck_threshold = 10;
-    int unstuck_threshold = 50;
+    int unstuck_threshold = 1;
 
     if (pCell->parameters.stuck_counter == stuck_threshold){
-        std::cout << "!HELP! cell " << pCell->ID << " gets stuck at time " << PhysiCell_globals.current_time << std::endl;
-        //std::cout << "stuck counter is: " << pCell->parameters.stuck_counter << " unstuck counter is: " << pCell->parameters.unstuck_counter << std::endl;
+        std::cout << "!HELP! cell " << pCell->ID << " gets stuck at time "
+                  << PhysiCell_globals.current_time << std::endl;
         pCell->parameters.stuck_counter = 0;
         pCell->parameters.unstuck_counter = 1;
     }
 
-    if (1 <= pCell->parameters.unstuck_counter && pCell->parameters.unstuck_counter < unstuck_threshold) {
+    if (1 <= pCell->parameters.unstuck_counter && pCell->parameters.unstuck_counter < unstuck_threshold+1) {
+        std::cout << " getting unstuck at time "
+                  << PhysiCell_globals.current_time << std::endl;
+        std::cout << std::endl;
         pCell->parameters.unstuck_counter++;
         pCell->force_update_motility_vector(dt);
         pCell->velocity += phenotype.motility.motility_vector;
-        /*if (pCell->type_name == "cell" ){
-            std::cout << " unstuck counter is: " << pCell->parameters.unstuck_counter << std::endl;
-            //std::cout << "   cell motility vector is: " << phenotype.motility.motility_vector << std::endl;
-            //std::cout << "   cell migration bias direction is: " <<phenotype.motility.migration_bias_direction << std::endl;
-            std::cout << "   cell is travelling in the direction: " << pCell->velocity << std::endl;
-            std::cout << std::endl;
-        }*/
     }
     else {
         pCell->update_motility_vector(dt);
         pCell->velocity += phenotype.motility.motility_vector;
-        /*if (pCell->type_name == "cell" ){
-            std::cout << "At time " << PhysiCell_globals.current_time << std::endl;
-            std::cout << "   cell motility vector is: " << phenotype.motility.motility_vector << std::endl;
-            std::cout << "   cell migration bias direction is: " <<phenotype.motility.migration_bias_direction << std::endl;
-            std::cout << "   cell is travelling in the direction: " << pCell->velocity << std::endl;
-            std::cout << std::endl;
-        }*/
     }
 
-    if(pCell->parameters.unstuck_counter == unstuck_threshold){
+    if(pCell->parameters.unstuck_counter == unstuck_threshold+1){
         pCell->parameters.unstuck_counter = 0;
     }
 

@@ -190,8 +190,7 @@ std::vector<double> normalize( std::vector<double>& v )
 {
  std::vector<double> output = v ;
 
- double norm = 0.0; 
- norm = 0.0; 
+ double norm = 0.0;
 
  for( unsigned int i=0; i < v.size(); i++ )
  { norm += ( v[i]*v[i] ); }
