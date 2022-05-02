@@ -77,7 +77,8 @@
 
 #include "../modules/PhysiCell_settings.h" 
 
-#include "./PhysiCell_standard_models.h" 
+#include "./PhysiCell_standard_models.h"
+#include <list>
 
 using namespace BioFVM; 
 
@@ -121,8 +122,10 @@ class Cell_Parameters
     double stuck_counter = 0;
     double unstuck_counter = 0;
 
+    bool degradation_flag = false;
+
     int X_crosslink_count;
-    int T_crosslink_count;
+    //int T_crosslink_count;
 
 	double mVelocityAdhesion = 0;
 
@@ -160,7 +163,8 @@ class Cell_State
  public:
 	std::vector<Cell*> attached_cells; 
 
-	std::vector<Cell*> neighbors; // not currently tracked! 
+	std::vector<Cell*> neighbors; // not currently tracked!
+	std::vector<Cell*> agent_voxels; // PhysiMess
 	std::vector<double> orientation;
 	
 	double simple_pressure;
@@ -194,9 +198,10 @@ class Cell : public Basic_Agent
 	void advance_bundled_phenotype_functions( double dt_ ); 
 	
 	void add_potentials(Cell*);       // Add repulsive and adhesive forces.
-    void check_fibre_crosslinks(Cell*); // for use in fibre cross-link models
+    void check_fibre_crosslinks(Cell*); // for use in fibre crosslink models
     void degrade_fibre(Cell*); // for use in fibre degradation models
-    std::vector<double> nearest_point_on_fibre(std::vector<double> point, Cell* , std::vector<double>& displacement); // for use in fibre degradation models
+    //int agent_voxels(Cell*);
+    std::vector<double> nearest_point_on_fibre(std::vector<double> point, Cell* , std::vector<double>& displacement);
 	void set_previous_velocity(double xV, double yV, double zV);
 	int get_current_mechanics_voxel_index();
 	void turn_off_reactions(double); 		  // Turn off all the reactions of the cell
@@ -248,8 +253,8 @@ class Cell : public Basic_Agent
 	void ingest_cell( Cell* pCell_to_eat ); // for use in predation, e.g., immune cells
 
 	void attach_cell( Cell* pAddMe ); // done 
-	void detach_cell( Cell* pRemoveMe ); // done 
-	void remove_all_attached_cells( void ); // done 
+	void detach_cell( Cell* pRemoveMe ); // done
+	void remove_all_attached_cells( void ); // done
 
 	// I want to eventually deprecate this, by ensuring that 
 	// critical BioFVM and PhysiCell data elements are synced when they are needed 
@@ -301,6 +306,11 @@ void detach_cells( Cell* pCell_1 , Cell* pCell_2 );
 
 std::vector<Cell*> find_nearby_cells( Cell* pCell ); // new in 1.8.0
 std::vector<Cell*> find_nearby_interacting_cells( Cell* pCell ); // new in 1.8.0
+
+void register_fibre_voxels( Cell* pCell );
+void deregister_fibre_voxels( Cell* pCell );
+std::list<int> find_agent_voxels(Cell * pCell );
+void find_agent_neighbors( Cell* pCell );
 
 };
 

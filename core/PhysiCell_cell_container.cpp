@@ -190,13 +190,13 @@ void Cell_Container::update_all_cells(double t, double phenotype_dt_ , double me
 		{
 			time_since_last_mechanics = mechanics_dt_;
 		}
-		
+
 		// new February 2018 
 		// if we need gradients, compute them
 		if( default_microenvironment_options.calculate_gradients ) 
 		{ microenvironment.compute_all_gradient_vectors();  }
-		// end of new in Feb 2018 
-		
+		// end of new in Feb 2018
+
 		// std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " " << "interactions" << std::endl; 
 		// perform interactions -- new in June 2020 
 		#pragma omp parallel for 
@@ -209,27 +209,62 @@ void Cell_Container::update_all_cells(double t, double phenotype_dt_ , double me
 		
 		// perform custom computations 
 
-		// std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " " << "custom" << std::endl; 
+		// std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " " << "custom" << std::endl;
+        #pragma omp parallel for
+        for( int i=0; i < (*all_cells).size(); i++ )
+        {
+            Cell* pC = (*all_cells)[i];
+            if( !pC->is_out_of_domain )
+            {
+                register_fibre_voxels(pC);
+            }
+        }
+
+        #pragma omp parallel for
+        for( int i=0; i < (*all_cells).size(); i++ )
+        {
+            Cell* pC = (*all_cells)[i];
+            pC->state.neighbors.clear(); //new for PhysiMess
+            if( !pC->is_out_of_domain )
+            {
+                find_agent_neighbors(pC);
+            }
+        }
+
+        #pragma omp parallel for
+        for( int i=0; i < (*all_cells).size(); i++ )
+        {
+            Cell* pC = (*all_cells)[i];
+            if( !pC->is_out_of_domain )
+            {
+                deregister_fibre_voxels(pC);
+            }
+        }
+
 		#pragma omp parallel for 
 		for( int i=0; i < (*all_cells).size(); i++ )
 		{
-			Cell* pC = (*all_cells)[i]; 
+			Cell* pC = (*all_cells)[i];
 			if( pC->functions.custom_cell_rule && pC->is_out_of_domain == false )
-			{ pC->functions.custom_cell_rule( pC,pC->phenotype,time_since_last_mechanics ); }
+			{
+                pC->functions.custom_cell_rule( pC,pC->phenotype,time_since_last_mechanics );
+            }
 		}
-		
-		// update velocities 
-		
+
+
+		// update velocities
+
 		// std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " " << "velocity" << std::endl; 
 		#pragma omp parallel for 
 		for( int i=0; i < (*all_cells).size(); i++ )
 		{
-			Cell* pC = (*all_cells)[i]; 
+			Cell* pC = (*all_cells)[i];
 			if( pC->functions.update_velocity && pC->is_out_of_domain == false && pC->is_movable )
 			{ pC->functions.update_velocity( pC,pC->phenotype,time_since_last_mechanics ); }
 		}
 
-		// update positions 
+
+		// update positions
 		
 		// std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " " << "position" << std::endl; 
 		#pragma omp parallel for 
@@ -237,9 +272,10 @@ void Cell_Container::update_all_cells(double t, double phenotype_dt_ , double me
 		{
 			Cell* pC = (*all_cells)[i]; 
 			if( pC->is_out_of_domain == false && pC->is_movable)
-			{ pC->update_position(time_since_last_mechanics); }
+			{
+                pC->update_position(time_since_last_mechanics);
+            }
 		}
-		
 /*		
 		// Compute custom functions, interations, and velocities
 		#pragma omp parallel for 
@@ -277,9 +313,9 @@ void Cell_Container::update_all_cells(double t, double phenotype_dt_ , double me
 		}
 */		
 		
-		// When somebody reviews this code, let's add proper braces for clarity!!! 
-		
-		// Update cell indices in the container
+		// When somebody reviews this code, let's add proper braces for clarity!!!
+
+        // Update cell indices in the container
 		for( int i=0; i < (*all_cells).size(); i++ )
 			if(!(*all_cells)[i]->is_out_of_domain && (*all_cells)[i]->is_movable)
 				(*all_cells)[i]->update_voxel_in_container();
@@ -312,16 +348,19 @@ void Cell_Container::add_agent_to_outer_voxel(Cell* agent)
 
 void Cell_Container::remove_agent_from_voxel(Cell* agent, int voxel_index)
 {
-	int delete_index = 0; 
+    //std::cout << " agent " << (*agent).type_name << " " << (*agent).ID << " is being removed from voxel " << voxel_index << std::endl;
+    int delete_index = 0;
 	while( agent_grid[voxel_index][ delete_index ] != agent )
 	{
 		delete_index++; 
 	}
 	// move last item to index location  
-	agent_grid[agent->get_current_mechanics_voxel_index()][delete_index] = agent_grid[agent->get_current_mechanics_voxel_index()][agent_grid[agent->get_current_mechanics_voxel_index()].size()-1 ]; 
+	//agent_grid[agent->get_current_mechanics_voxel_index()][delete_index] = agent_grid[agent->get_current_mechanics_voxel_index()][agent_grid[agent->get_current_mechanics_voxel_index()].size()-1 ];
+	agent_grid[voxel_index][delete_index] = agent_grid[voxel_index][agent_grid[voxel_index].size()-1 ];
 	// shrink the vector
-	agent_grid[agent->get_current_mechanics_voxel_index()].pop_back(); 
-	return; 
+	//agent_grid[agent->get_current_mechanics_voxel_index()].pop_back();
+	agent_grid[voxel_index].pop_back();
+	return;
 }		
 
 void Cell_Container::add_agent_to_voxel(Cell* agent, int voxel_index)

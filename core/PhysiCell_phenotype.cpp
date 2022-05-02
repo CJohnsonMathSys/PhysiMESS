@@ -611,7 +611,7 @@ Geometry::Geometry()
 	// reference values for MCF-7, based on 
 	// volume = 2494 cubic microns
 	// nuclear volume = 540 cubic microns 
-	radius = 8.412710547954228; 
+	radius = 8.412710547954228;
 	nuclear_radius = 5.051670902881889; 
 	surface_area = 889.3685284131693; 
 	

@@ -70,6 +70,9 @@
 #include <chrono>
 #include <random>
 #include <string>
+#include <iostream>
+#include <vector>
+#include <algorithm>
 
 
 void create_cell_types( void ){
@@ -95,11 +98,13 @@ void create_cell_types( void ){
 	cell_defaults.functions.contact_function = NULL; 
 	
 	cell_defaults.functions.add_cell_basement_membrane_interactions = NULL; 
-	cell_defaults.functions.calculate_distance_to_membrane = NULL; 
-	
-	/*
-	   This parses the cell definitions in the XML config file. 
-	*/
+	cell_defaults.functions.calculate_distance_to_membrane = NULL;
+
+    cell_defaults.functions.custom_cell_rule = custom_function;
+
+    /*
+       This parses the cell definitions in the XML config file.
+    */
 	
 	initialize_cell_definitions_from_pugixml(); 
 	
@@ -109,9 +114,9 @@ void create_cell_types( void ){
 	   This is a good place to set custom functions. 
 	*/ 
 	
-	cell_defaults.functions.update_phenotype = phenotype_function; 
-	cell_defaults.functions.custom_cell_rule = custom_function; 
-	cell_defaults.functions.contact_function = contact_function; 
+	cell_defaults.functions.update_phenotype = phenotype_function;
+    //cell_defaults.functions.custom_cell_rule = custom_function;
+    cell_defaults.functions.contact_function = contact_function;
 	
 	/*
 	   This builds the map of cell definitions and summarizes the setup. 

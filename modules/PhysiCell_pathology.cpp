@@ -520,7 +520,7 @@ void SVG_plot( std::string filename , Microenvironment& M, double z_slice , doub
             agentname.find(fiber) != std::string::npos ||
             agentname.find(rod) != std::string::npos){
 
-            int crosslinks = pC->parameters.X_crosslink_count + pC->parameters.T_crosslink_count;
+            int crosslinks = pC->parameters.X_crosslink_count; //+ pC->parameters.T_crosslink_count;
             if (crosslinks >= 3){
                 // if fibre has cross-links different colour than if not
                 Write_SVG_line(os, (pC->position)[0] - (pC->parameters.mLength) * (pC->state.orientation)[0] - X_lower,

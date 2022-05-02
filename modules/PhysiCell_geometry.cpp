@@ -255,7 +255,7 @@ void load_cells_csv( std::string filename )
 			std::cout << "Creating " << pCD->name << " (type=" << pCD->type << ") at " 
 			<< position << std::endl; 
 			Cell* pCell = create_cell( *pCD ); 
-			pCell->assign_position( position ); 
+			pCell->assign_position( position );
 		}
 		else
 		{

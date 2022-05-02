@@ -335,8 +335,8 @@ class Volume
 class Geometry
 {
  public:
-	double radius; 
-	double nuclear_radius; 
+	double radius;
+	double nuclear_radius;
 	double surface_area; 
 	
 	double polarity; 

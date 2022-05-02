@@ -66,7 +66,9 @@
 */
 
 #include "PhysiCell_standard_models.h" 
-#include "PhysiCell_cell.h" 
+#include "PhysiCell_cell.h"
+#include <list>
+#include <algorithm>
 
 namespace PhysiCell{
 	
@@ -561,9 +563,6 @@ void standard_volume_update_function( Cell* pCell, Phenotype& phenotype, double 
 
 void basic_volume_model( Cell* pCell, Phenotype& phenotype, double dt )
 {
-	
-	
-	
 	return; 
 }
 
@@ -575,95 +574,73 @@ void standard_update_cell_velocity( Cell* pCell, Phenotype& phenotype, double dt
 	}
 	
 	pCell->state.simple_pressure = 0.0;
-	pCell->state.neighbors.clear(); // new 1.8.0
 
     // Check for crosslinks
     pCell->parameters.X_crosslink_count = 0;
-    pCell->parameters.T_crosslink_count = 0;
+    //pCell->parameters.T_crosslink_count = 0;
 
-	//First check the crosslinks in my current voxel
-	std::vector<Cell*>::iterator f_neighbor;
-	std::vector<Cell*>::iterator f_end =pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
-	for(f_neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); f_neighbor != f_end; ++f_neighbor)
-	{
-		pCell->check_fibre_crosslinks(*f_neighbor);
-	}
-    //Then check the crosslinks in neighboring voxels
-    std::vector<int>::iterator f_neighbor_voxel_index;
-	std::vector<int>::iterator f_neighbor_voxel_index_end =
-		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].end();
-	for( f_neighbor_voxel_index =
-		pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].begin();
-		f_neighbor_voxel_index != f_neighbor_voxel_index_end;
-		++f_neighbor_voxel_index )
-	{
-		if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[*f_neighbor_voxel_index].center, *f_neighbor_voxel_index))
-			continue;
-		f_end = pCell->get_container()->agent_grid[*f_neighbor_voxel_index].end();
-		for(f_neighbor = pCell->get_container()->agent_grid[*f_neighbor_voxel_index].begin();f_neighbor != f_end; ++f_neighbor)
-		{
-            pCell->check_fibre_crosslinks(*f_neighbor);
-		}
-	}
+    std::cout << " AGENT " << pCell->type_name << " " << pCell->ID << " has " ;
 
-    /*if (pCell->type_name == "fibre" && pCell->parameters.X_crosslink_count  > 0)
-    {
-        std::cout << " fibre " << pCell->ID <<  " has "
-                  << pCell->parameters.X_crosslink_count  << " cross-links "
-                  << " its crosslink location is at " << pCell->state.crosslink_point
-                  << std::endl;
-    }*/
-
-    //First check the neighbors in my current voxel
-    std::vector<Cell*>::iterator neighbor;
-    std::vector<Cell*>::iterator end = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].end();
-    for(neighbor = pCell->get_container()->agent_grid[pCell->get_current_mechanics_voxel_index()].begin(); neighbor != end; ++neighbor)
-    {
-        pCell->add_potentials(*neighbor);
-    }
-    std::vector<int>::iterator neighbor_voxel_index;
-    std::vector<int>::iterator neighbor_voxel_index_end =
-            pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].end();
-
-    for( neighbor_voxel_index =
-                 pCell->get_container()->underlying_mesh.moore_connected_voxel_indices[pCell->get_current_mechanics_voxel_index()].begin();
-         neighbor_voxel_index != neighbor_voxel_index_end;
-         ++neighbor_voxel_index )
-    {
-        if(!is_neighbor_voxel(pCell, pCell->get_container()->underlying_mesh.voxels[pCell->get_current_mechanics_voxel_index()].center, pCell->get_container()->underlying_mesh.voxels[*neighbor_voxel_index].center, *neighbor_voxel_index))
-            continue;
-        end = pCell->get_container()->agent_grid[*neighbor_voxel_index].end();
-        for(neighbor = pCell->get_container()->agent_grid[*neighbor_voxel_index].begin();neighbor != end; ++neighbor)
-        {
-            pCell->add_potentials(*neighbor);
+    //check any crosslinks between pCell and its neighbors provided both are fibres
+    if (pCell->type_name == "fibre") {
+        std::vector<Cell *>::iterator f_neighbor;
+        std::vector<Cell *>::iterator f_end = pCell->state.neighbors.end();
+        for (f_neighbor = pCell->state.neighbors.begin(); f_neighbor != f_end; ++f_neighbor) {
+            if((*f_neighbor)->type_name == "fibre") {
+                //std::cout << " FOR CROSSLINKS: NEIGHBOR FIBRE AGENT IS " << (*f_neighbor)->type_name << " " << (*f_neighbor)->ID << std::endl;
+                pCell->check_fibre_crosslinks(*f_neighbor);
+            }
         }
     }
 
-    int stuck_threshold = 10;
-    int unstuck_threshold = 1;
+    /*if (pCell->type_name == "fibre" && pCell->parameters.X_crosslink_count  > 0){
+    std::cout << " fibre " << pCell->ID <<  " has "
+              << pCell->parameters.X_crosslink_count  << " cross-links "
+              //<< " its crosslink location is at " << pCell->state.crosslink_point
+              << std::endl;
+    }*/
 
-    if (pCell->parameters.stuck_counter == stuck_threshold){
-        std::cout << "!HELP! cell " << pCell->ID << " gets stuck at time "
-                  << PhysiCell_globals.current_time << std::endl;
-        pCell->parameters.stuck_counter = 0;
-        pCell->parameters.unstuck_counter = 1;
+    //add potentials between pCell and its neighbors
+    std::vector<Cell*>::iterator neighbor;
+    std::vector<Cell*>::iterator end = pCell->state.neighbors.end();
+    std::cout << pCell->state.neighbors.size() << " neighbors: " ;
+    for(neighbor = pCell->state.neighbors.begin(); neighbor != end; ++neighbor) {
+        std::cout << (*neighbor)->type_name << " " << (*neighbor)->ID << " " ;
+        pCell->add_potentials(*neighbor);
     }
+    std::cout << std::endl;
 
-    if (1 <= pCell->parameters.unstuck_counter && pCell->parameters.unstuck_counter < unstuck_threshold+1) {
-        std::cout << " getting unstuck at time "
-                  << PhysiCell_globals.current_time << std::endl;
-        std::cout << std::endl;
-        pCell->parameters.unstuck_counter++;
-        pCell->force_update_motility_vector(dt);
-        pCell->velocity += phenotype.motility.motility_vector;
+    if (pCell->parameters.degradation_flag){
+        pCell->degrade_fibre(pCell);
+        //std::cout << " fibre is degraded " << std::endl;
     }
-    else {
-        pCell->update_motility_vector(dt);
-        pCell->velocity += phenotype.motility.motility_vector;
-    }
+    else{
+        int stuck_threshold = 10;
+        int unstuck_threshold = 1;
 
-    if(pCell->parameters.unstuck_counter == unstuck_threshold+1){
-        pCell->parameters.unstuck_counter = 0;
+        if (pCell->parameters.stuck_counter == stuck_threshold){
+            std::cout << "!HELP! cell " << pCell->ID << " gets stuck at time "
+                      << PhysiCell_globals.current_time << std::endl;
+            pCell->parameters.stuck_counter = 0;
+            pCell->parameters.unstuck_counter = 1;
+        }
+
+        if (1 <= pCell->parameters.unstuck_counter && pCell->parameters.unstuck_counter < unstuck_threshold+1) {
+            std::cout << " getting unstuck at time "
+                      << PhysiCell_globals.current_time << std::endl;
+            std::cout << std::endl;
+            pCell->parameters.unstuck_counter++;
+            pCell->force_update_motility_vector(dt);
+            pCell->velocity += phenotype.motility.motility_vector;
+        }
+        else {
+            pCell->update_motility_vector(dt);
+            pCell->velocity += phenotype.motility.motility_vector;
+        }
+
+        if(pCell->parameters.unstuck_counter == unstuck_threshold+1){
+            pCell->parameters.unstuck_counter = 0;
+        }
     }
 
 	return; 
